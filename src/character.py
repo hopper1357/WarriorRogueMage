@@ -33,6 +33,11 @@ class Character(pygame.sprite.Sprite):
         self.equipped_armor = None
         self.d6 = Die()
 
+        # Advancement
+        self.level = 1
+        self.xp = 0
+        self.xp_to_next_level = 100
+
         # Bonuses
         self.ranged_attack_bonus = 0
 
@@ -160,6 +165,17 @@ class Character(pygame.sprite.Sprite):
     @property
     def is_dead(self):
         return self.hp <= 0
+
+    def add_xp(self, amount):
+        self.xp += amount
+        leveled_up = False
+        while self.xp >= self.xp_to_next_level:
+            self.level += 1
+            self.xp -= self.xp_to_next_level
+            self.xp_to_next_level = int(self.xp_to_next_level * 1.5) # Increase xp requirement for next level
+            leveled_up = True
+            print(f"{self.name} has reached level {self.level}!")
+        return leveled_up
 
     def __str__(self):
         return (

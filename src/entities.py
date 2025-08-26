@@ -6,10 +6,9 @@ class NPC(Character):
         self.dialogue = dialogue
 
 class Monster(Character):
-    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, color=(0, 255, 0)):
+    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, color=(0, 255, 0), xp_value=0):
         super().__init__(name, x, y, warrior, rogue, mage, skills, talents, color)
-        # Monsters can have specific AI behaviors in the future
-        pass
+        self.xp_value = xp_value
 
 class TownGuard(NPC):
     def __init__(self, x, y):
@@ -33,5 +32,6 @@ class Goblin(Monster):
             rogue=3,
             mage=1,
             skills=["Daggers"],
-            color=(0, 128, 0) # Dark Green
+            color=(0, 128, 0), # Dark Green
+            xp_value=50
         )

@@ -195,3 +195,19 @@ def test_cast_spell_with_armor_penalty(mock_roll):
 
     assert result is True
     assert char.mana == 4 # 10 - (5 + 1)
+
+def test_add_xp_and_level_up():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)
+    assert char.level == 1
+    assert char.xp == 0
+    assert char.xp_to_next_level == 100
+
+    leveled_up = char.add_xp(50)
+    assert not leveled_up
+    assert char.xp == 50
+
+    leveled_up = char.add_xp(60)
+    assert leveled_up
+    assert char.level == 2
+    assert char.xp == 10 # 110 - 100
+    assert char.xp_to_next_level == 150 # 100 * 1.5

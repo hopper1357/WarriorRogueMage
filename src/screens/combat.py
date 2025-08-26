@@ -18,6 +18,7 @@ class CombatScreen:
         self.font = pygame.font.Font(None, 36)
         self.is_over = False
         self.winner = None
+        self.leveled_up = False
 
         self.buttons = self._create_buttons()
         self.turn, _ = self.combat.determine_initiative()
@@ -46,6 +47,10 @@ class CombatScreen:
         if self.opponent.is_dead:
             self.winner = self.player
             self.is_over = True
+            xp_gain = self.opponent.xp_value
+            self.combat_log.append(f"You gained {xp_gain} XP!")
+            if self.player.add_xp(xp_gain):
+                self.leveled_up = True
 
         self.turn = self.opponent
         self._monster_turn()

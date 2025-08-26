@@ -7,6 +7,7 @@ from screens.character_creation import CharacterCreationScreen
 from screens.gameplay import GameplayScreen
 from screens.combat import CombatScreen
 from screens.inventory import InventoryScreen
+from screens.advancement import AdvancementScreen
 from save_manager import load_game, save_game
 
 class GameState(Enum):
@@ -15,6 +16,7 @@ class GameState(Enum):
     GAMEPLAY = 2
     COMBAT = 3
     INVENTORY = 4
+    ADVANCEMENT = 5
 
 def main():
     pygame.init()
@@ -30,6 +32,7 @@ def main():
     gameplay_screen = None
     combat_screen = None
     inventory_screen = None
+    advancement_screen = None
     player = None
     active_monster = None
 
@@ -54,13 +57,25 @@ def main():
                 if combat_screen.is_over and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     if combat_screen.winner == player:
                         active_monster.kill()
-                    game_state = GameState.GAMEPLAY
+                        if combat_screen.leveled_up:
+                            advancement_screen = AdvancementScreen(player)
+                            game_state = GameState.ADVANCEMENT
+                        else:
+                            game_state = GameState.GAMEPLAY
+                    else: # Player lost
+                        game_state = GameState.MAIN_MENU # Or a game over screen
                     combat_screen = None
             elif game_state == GameState.INVENTORY:
                 inventory_screen.handle_event(event)
                 if inventory_screen.is_done:
                     game_state = GameState.GAMEPLAY
                     inventory_screen = None
+            elif game_state == GameState.ADVANCEMENT:
+                advancement_screen.handle_event(event)
+                if advancement_screen.is_done:
+                    game_state = GameState.GAMEPLAY
+                    advancement_screen = None
+
 
         # State transitions and drawing
         screen.fill((0,0,0))
@@ -103,6 +118,10 @@ def main():
         elif game_state == GameState.INVENTORY:
             inventory_screen.update()
             inventory_screen.draw(screen)
+
+        elif game_state == GameState.ADVANCEMENT:
+            advancement_screen.update()
+            advancement_screen.draw(screen)
 
         pygame.display.flip()
 
