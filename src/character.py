@@ -3,6 +3,8 @@ from dice import Die
 from spell import Spell
 from talent import Talent
 from items import Weapon, Armor, MagicImplement
+from talents import all_talents
+import ritual
 
 SKILLS = {
     "warrior": ["Axes", "Blunt", "Polearms", "Riding", "Swords", "Unarmed"],
@@ -221,6 +223,31 @@ class Character(pygame.sprite.Sprite):
             else:
                 self.mana -= mana_cost
             return False
+
+    def contribute_to_ritual(self, ritual: 'Ritual', mana_amount, from_hp=False):
+        if from_hp:
+            if all_talents["blood_mage"] not in self.talents:
+                print(f"{self.name} is not a Blood Mage and cannot use HP for mana.")
+                return False
+
+            # 1 HP = 1 Mana
+            if self.hp <= mana_amount: # Can't kill self
+                print(f"{self.name} does not have enough HP to contribute {mana_amount} mana.")
+                return False
+
+            self.take_damage(mana_amount)
+            ritual.pool_mana(self, mana_amount)
+            print(f"{self.name} contributes {mana_amount} life force to the ritual.")
+            return True
+        else:
+            if self.mana < mana_amount:
+                print(f"{self.name} does not have enough mana to contribute {mana_amount}.")
+                return False
+
+            self.mana -= mana_amount
+            ritual.pool_mana(self, mana_amount)
+            print(f"{self.name} contributes {mana_amount} mana to the ritual.")
+            return True
 
     @property
     def is_dead(self):
