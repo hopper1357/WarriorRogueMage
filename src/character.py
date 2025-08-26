@@ -1,3 +1,4 @@
+import pygame
 from dice import Die
 from spell import Spell
 from talent import Talent
@@ -8,9 +9,16 @@ SKILLS = {
     "mage": ["Alchemy", "Awareness", "Herbalism", "Lore", "Thaumaturgy"],
 }
 
-class Character:
-    def __init__(self, name, warrior, rogue, mage, skills=None, talents=None):
+class Character(pygame.sprite.Sprite):
+    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, color=(255, 0, 0)):
+        super().__init__()
         self.name = name
+
+        self.image = pygame.Surface((40, 40))
+        self.image.fill(color)
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+
         self.attributes = {
             "warrior": warrior,
             "rogue": rogue,

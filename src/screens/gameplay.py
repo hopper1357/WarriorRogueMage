@@ -1,5 +1,6 @@
 import pygame
 from character import Character
+from entities import TownGuard, Goblin
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -12,9 +13,22 @@ class GameplayScreen:
         self.player = player
         self.font = pygame.font.Font(None, 36)
 
-        # Simple player representation for now
-        self.player_rect = pygame.Rect(400, 300, 40, 40)
+        self.all_sprites = pygame.sprite.Group()
+        self.all_sprites.add(self.player)
+
+        self.npcs = pygame.sprite.Group()
+        guard = TownGuard(x=100, y=100)
+        self.all_sprites.add(guard)
+        self.npcs.add(guard)
+
+        self.monsters = pygame.sprite.Group()
+        goblin = Goblin(x=600, y=400)
+        self.all_sprites.add(goblin)
+        self.monsters.add(goblin)
+
         self.player_speed = 5
+        self.dialogue_to_show = None
+        self.active_monster = None
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -24,34 +38,45 @@ class GameplayScreen:
             if event.key == pygame.K_2:
                 if len(self.player.spellbook) > 1:
                     self.player.cast_spell(self.player.spellbook[1])
-            # Add more keys for more spells if needed
 
-    def update(self):
+    def update(self, screen):
+        # Player movement
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.player_rect.x -= self.player_speed
+            self.player.rect.x -= self.player_speed
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.player_rect.x += self.player_speed
+            self.player.rect.x += self.player_speed
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.player_rect.y -= self.player_speed
+            self.player.rect.y -= self.player_speed
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.player_rect.y += self.player_speed
+            self.player.rect.y += self.player_speed
 
         # Keep player on screen
-        if self.player_rect.left < 0:
-            self.player_rect.left = 0
-        if self.player_rect.right > 800:
-            self.player_rect.right = 800
-        if self.player_rect.top < 0:
-            self.player_rect.top = 0
-        if self.player_rect.bottom > 600:
-            self.player_rect.bottom = 600
+        self.player.rect.clamp_ip(screen.get_rect())
+
+        # Interaction logic
+        self.dialogue_to_show = None
+        for npc in self.npcs:
+            if self.player.rect.colliderect(npc.rect.inflate(20, 20))):
+                self.dialogue_to_show = npc.dialogue
+                break # Show one dialogue at a time
+
+        for monster in self.monsters:
+            if self.player.rect.colliderect(monster.rect.inflate(20, 20))):
+                self.active_monster = monster
+                from main import GameState
+                return GameState.COMBAT, self.active_monster
+
+        from main import GameState
+        return GameState.GAMEPLAY, None
 
     def draw(self, screen):
         screen.fill((25, 100, 25)) # A green background for the world
 
-        # Draw player
-        pygame.draw.rect(screen, (255, 0, 0), self.player_rect) # Red square for the player
+        self.all_sprites.draw(screen)
+
+        if self.dialogue_to_show:
+            draw_text(screen, self.dialogue_to_show, self.font, (255, 255, 255), 100, 450)
 
         # Draw HUD
         self._draw_hud(screen)

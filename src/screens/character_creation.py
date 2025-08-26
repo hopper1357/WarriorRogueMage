@@ -94,7 +94,15 @@ class CharacterCreationScreen:
 
                 final_talents = self.selected_race["talents"] + [self.selected_talent]
 
-                self.character = Character("Player", self.attributes["warrior"], self.attributes["rogue"], self.attributes["mage"], self.selected_skills, final_talents)
+                self.character = Character(
+                    name="Player",
+                    x=400, y=300,
+                    warrior=self.attributes["warrior"],
+                    rogue=self.attributes["rogue"],
+                    mage=self.attributes["mage"],
+                    skills=self.selected_skills,
+                    talents=final_talents
+                )
 
                 if self.character.attributes["mage"] > 0:
                     self.character.spellbook.append(all_spells["magic_light"])
