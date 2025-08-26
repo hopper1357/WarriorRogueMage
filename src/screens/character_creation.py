@@ -1,6 +1,7 @@
 import pygame
 from ui import Button
 from character import Character, SKILLS
+from spells import all_spells
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -58,6 +59,9 @@ class CharacterCreationScreen:
         elif name == "start":
             if self.points == 0 and len(self.selected_skills) == 3:
                 self.character = Character("Player", self.attributes["warrior"], self.attributes["rogue"], self.attributes["mage"], self.selected_skills)
+                if self.character.attributes["mage"] > 0:
+                    self.character.spellbook.append(all_spells["magic_light"])
+                    self.character.spellbook.append(all_spells["healing_hand"])
                 self.is_done = True
         else: # Skill button
             skill = name

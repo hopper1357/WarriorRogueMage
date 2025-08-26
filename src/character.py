@@ -1,4 +1,5 @@
 from dice import Die
+from spell import Spell
 
 SKILLS = {
     "warrior": ["Axes", "Blunt", "Polearms", "Riding", "Swords", "Unarmed"],
@@ -15,6 +16,7 @@ class Character:
             "mage": mage,
         }
         self.skills = skills if skills is not None else []
+        self.spellbook = []
         self.d6 = Die()
 
         self.hp = 6 + self.attributes["warrior"]
@@ -65,6 +67,35 @@ class Character:
         self.hp -= damage
         if self.hp < 0:
             self.hp = 0
+
+    def heal(self, amount):
+        self.hp += amount
+        if self.hp > self.max_hp:
+            self.hp = self.max_hp
+
+    def cast_spell(self, spell, target=None):
+        if spell not in self.spellbook:
+            print(f"{self.name} does not know the spell {spell.name}.")
+            return False
+
+        if self.mana < spell.mana_cost:
+            print(f"{self.name} does not have enough mana to cast {spell.name}.")
+            return False
+
+        # Perform a Mage attribute check against the spell's DL
+        # The 'Thaumaturgy' skill is relevant for spell casting
+        success, total = self.attribute_check("mage", ["Thaumaturgy"], spell.dl)
+
+        if success:
+            print(f"{self.name} successfully casts {spell.name} (Total: {total}).")
+            self.mana -= spell.mana_cost
+            spell.effect(caster=self, target=target)
+            return True
+        else:
+            print(f"{self.name} failed to cast {spell.name} (Total: {total}).")
+            # According to WR&M rules, mana is still consumed on a failed casting roll
+            self.mana -= spell.mana_cost
+            return False
 
     @property
     def is_dead(self):

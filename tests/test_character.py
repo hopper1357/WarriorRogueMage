@@ -3,6 +3,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from character import Character
+from spell import Spell
 from unittest.mock import patch, MagicMock
 
 def test_character_initialization():
@@ -29,6 +30,16 @@ def test_take_damage():
     char.take_damage(10)
     assert char.hp == 0
     assert char.is_dead
+
+def test_heal():
+    char = Character("Test", warrior=5, rogue=2, mage=1)
+    char.hp = 1
+    char.heal(5)
+    assert char.hp == 6
+    char.heal(10)
+    assert char.hp == 11 # max_hp is 11
+    char.heal(1)
+    assert char.hp == 11
 
 @patch('dice.Die.roll')
 def test_attribute_check_success(mock_roll):
@@ -81,3 +92,62 @@ def test_opposed_check(mock_roll):
     assert winner == char1
     assert char1_total == 12
     assert char2_total == 7
+
+@patch('dice.Die.roll')
+def test_cast_spell_success(mock_roll):
+    mock_roll.return_value = 5 # Roll a 5, total check is 5 + 3(mage) + 2(thaumaturgy) = 10. DL is 10.
+    char = Character("Test", warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+    char.mana = 10
+
+    mock_effect = MagicMock()
+    spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
+    char.spellbook.append(spell)
+
+    result = char.cast_spell(spell)
+
+    assert result is True
+    assert char.mana == 5
+    mock_effect.assert_called_once_with(caster=char, target=None)
+
+@patch('dice.Die.roll')
+def test_cast_spell_failure_roll(mock_roll):
+    mock_roll.return_value = 1 # Roll a 1, total check is 1 + 3(mage) + 2(thaumaturgy) = 6. DL is 10.
+    char = Character("Test", warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+    char.mana = 10
+
+    mock_effect = MagicMock()
+    spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
+    char.spellbook.append(spell)
+
+    result = char.cast_spell(spell)
+
+    assert result is False
+    assert char.mana == 5 # Mana is consumed even on failure
+    mock_effect.assert_not_called()
+
+def test_cast_spell_failure_no_mana():
+    char = Character("Test", warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+    char.mana = 3
+
+    mock_effect = MagicMock()
+    spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
+    char.spellbook.append(spell)
+
+    result = char.cast_spell(spell)
+
+    assert result is False
+    assert char.mana == 3
+    mock_effect.assert_not_called()
+
+def test_cast_spell_failure_unknown_spell():
+    char = Character("Test", warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+    char.mana = 10
+
+    mock_effect = MagicMock()
+    spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
+
+    result = char.cast_spell(spell)
+
+    assert result is False
+    assert char.mana == 10
+    mock_effect.assert_not_called()

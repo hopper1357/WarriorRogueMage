@@ -17,8 +17,14 @@ class GameplayScreen:
         self.player_speed = 5
 
     def handle_event(self, event):
-        # We will handle movement with pressed keys, not events, for smoother movement
-        pass
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_1:
+                if len(self.player.spellbook) > 0:
+                    self.player.cast_spell(self.player.spellbook[0])
+            if event.key == pygame.K_2:
+                if len(self.player.spellbook) > 1:
+                    self.player.cast_spell(self.player.spellbook[1])
+            # Add more keys for more spells if needed
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -59,3 +65,8 @@ class GameplayScreen:
         draw_text(screen, f"Mana: {self.player.mana}/{self.player.max_mana}", self.font, (255, 255, 255), 10, 550)
         draw_text(screen, f"Fate: {self.player.fate}", self.font, (255, 255, 255), 200, 510)
         draw_text(screen, f"Defense: {self.player.defense}", self.font, (255, 255, 255), 200, 550)
+
+        # Display spells
+        draw_text(screen, "Spells:", self.font, (255, 255, 255), 400, 510)
+        for i, spell in enumerate(self.player.spellbook):
+            draw_text(screen, f"({i+1}) {spell.name}", self.font, (255, 255, 255), 400, 550 + i * 40)
