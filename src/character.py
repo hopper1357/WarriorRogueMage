@@ -28,6 +28,7 @@ class Character(pygame.sprite.Sprite):
         self.skills = skills if skills is not None else []
         self.talents = talents if talents is not None else []
         self.spellbook = []
+        self.sustained_spells = []
         self.inventory = []
         self.equipped_weapon = None
         self.equipped_armor = None
@@ -105,6 +106,9 @@ class Character(pygame.sprite.Sprite):
         bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
         return self.defense + bonus
 
+    def get_sustained_penalty(self):
+        return -len(self.sustained_spells)
+
     def _get_attribute_check_total(self, attribute, relevant_skills):
         if attribute not in self.attributes:
             raise ValueError(f"Invalid attribute: {attribute}")
@@ -130,6 +134,8 @@ class Character(pygame.sprite.Sprite):
             total += self.lore_bonus
         if "Thaumaturgy" in relevant_skills:
             total += self.thaumaturgy_bonus
+
+        total += self.get_sustained_penalty()
 
         return total
 
@@ -163,22 +169,27 @@ class Character(pygame.sprite.Sprite):
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
-    def cast_spell(self, spell, target=None, use_implement=False):
-        # Check if the character knows the spell, either personally or through an implement
-        knows_spell = spell in self.spellbook
-        implement_knows_spell = self.equipped_implement and spell in self.equipped_implement.stored_spells
-
-        if not knows_spell:
+    def cast_spell(self, spell, target=None, use_implement=False, enhancement_level=0):
+        # Check if the character knows the spell
+        if spell not in self.spellbook:
             print(f"{self.name} does not know the spell {spell.name}.")
             return False
 
+        # Calculate final mana cost and DL
         mana_cost = spell.mana_cost
         if self.equipped_armor:
             mana_cost += self.equipped_armor.armor_penalty
 
+        enhancement_cost = enhancement_level * (spell.mana_cost // 2)
+        mana_cost += enhancement_cost
+
+        dl = spell.dl + enhancement_level
+
         # Determine which mana pool to use
         source_name = self.name
-        if use_implement and implement_knows_spell:
+        can_use_implement = use_implement and self.equipped_implement and spell in self.equipped_implement.stored_spells
+
+        if can_use_implement:
             source_name = self.equipped_implement.name
             if self.equipped_implement.mana_pool < mana_cost:
                 print(f"{source_name} does not have enough mana.")
@@ -189,15 +200,19 @@ class Character(pygame.sprite.Sprite):
                 return False
 
         # Perform a Mage attribute check against the spell's DL
-        success, total = self.attribute_check("mage", ["Thaumaturgy"], spell.dl)
+        success, total = self.attribute_check("mage", ["Thaumaturgy"], dl)
 
         if success:
             print(f"{self.name} successfully casts {spell.name} from {source_name} (Total: {total}).")
-            if use_implement and implement_knows_spell:
+            if can_use_implement:
                 self.equipped_implement.mana_pool -= mana_cost
             else:
                 self.mana -= mana_cost
-            spell.effect(caster=self, target=target)
+
+            if spell.duration > 0 and spell not in self.sustained_spells:
+                self.sustained_spells.append(spell)
+
+            spell.effect(caster=self, target=target, enhancement_level=enhancement_level)
             return True
         else:
             print(f"{self.name} failed to cast {spell.name} from {source_name} (Total: {total}).")

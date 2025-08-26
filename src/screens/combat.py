@@ -3,6 +3,7 @@ from character import Character
 from combat import Combat
 from ui import Button
 from items import all_items
+from spells import all_spells
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -19,21 +20,95 @@ class CombatScreen:
         self.is_over = False
         self.winner = None
         self.leveled_up = False
+        self.selection_state = "main" # "main", "spell_selection", "enhancement"
+        self.selected_spell = None
+        self.enhancement_level = 0
 
-        self.buttons = self._create_buttons()
+        self.buttons = self._create_main_buttons()
         self.turn, _ = self.combat.determine_initiative()
         self.combat_log = [f"{self.turn.name} wins initiative!"]
 
-    def _create_buttons(self):
+    def _create_main_buttons(self):
         buttons = {}
         buttons["attack"] = Button(100, 450, 150, 50, "Attack", (200, 0, 0), (255, 255, 255))
-        # Add more buttons for spells, items, flee later
+        buttons["spell"] = Button(300, 450, 150, 50, "Cast Spell", (0, 0, 200), (255, 255, 255))
+        buttons["dismiss"] = Button(500, 450, 150, 50, "Dismiss Spells", (0, 100, 200), (255, 255, 255))
+        return buttons
+
+    def _create_spell_buttons(self):
+        buttons = {}
+        for i, spell in enumerate(self.player.spellbook):
+            buttons[spell.name] = Button(100 + (i % 4) * 160, 400 + (i // 4) * 60, 150, 50, spell.name, (0, 0, 200), (255, 255, 255))
+        buttons["back"] = Button(650, 500, 100, 50, "Back", (200, 200, 0), (0, 0, 0))
+        return buttons
+
+    def _create_enhancement_buttons(self):
+        buttons = {}
+        buttons["inc"] = Button(450, 250, 40, 40, "+", (0, 255, 0), (0, 0, 0))
+        buttons["dec"] = Button(500, 250, 40, 40, "-", (255, 0, 0), (0, 0, 0))
+        buttons["cast"] = Button(300, 350, 200, 50, "Cast Spell", (0, 0, 200), (255, 255, 255))
+        buttons["back"] = Button(650, 500, 100, 50, "Back", (200, 200, 0), (0, 0, 0))
         return buttons
 
     def handle_event(self, event):
         if self.turn == self.player:
-            if self.buttons["attack"].is_clicked(event):
-                self._player_turn("attack")
+            if self.selection_state == "main":
+                if self.buttons["attack"].is_clicked(event):
+                    self._player_turn("attack")
+                elif self.buttons.get("spell") and self.buttons["spell"].is_clicked(event):
+                    self.selection_state = "spell_selection"
+                    self.buttons = self._create_spell_buttons()
+                elif self.buttons["dismiss"].is_clicked(event):
+                    if self.player.sustained_spells:
+                        self.player.sustained_spells.clear()
+                        self.combat_log.append("You dismissed all sustained spells.")
+            elif self.selection_state == "spell_selection":
+                if self.buttons["back"].is_clicked(event):
+                    self.selection_state = "main"
+                    self.buttons = self._create_main_buttons()
+                else:
+                    for spell in self.player.spellbook:
+                        if self.buttons.get(spell.name) and self.buttons[spell.name].is_clicked(event):
+                            self.selected_spell = spell
+                            self.enhancement_level = 0
+                            self.selection_state = "enhancement"
+                            self.buttons = self._create_enhancement_buttons()
+                            break
+            elif self.selection_state == "enhancement":
+                if self.buttons["inc"].is_clicked(event):
+                    self.enhancement_level += 1
+                elif self.buttons["dec"].is_clicked(event):
+                    if self.enhancement_level > 0:
+                        self.enhancement_level -= 1
+                elif self.buttons["cast"].is_clicked(event):
+                    self._player_turn_spell()
+                elif self.buttons["back"].is_clicked(event):
+                    self.selection_state = "spell_selection"
+                    self.buttons = self._create_spell_buttons()
+
+    def _player_turn_spell(self):
+        success = self.player.cast_spell(self.selected_spell, self.opponent, enhancement_level=self.enhancement_level)
+        if success:
+            self.combat_log.append(f"You cast {self.selected_spell.name}!")
+        else:
+            self.combat_log.append(f"You failed to cast {self.selected_spell.name}!")
+
+        if self.opponent.is_dead:
+            self.winner = self.player
+            self.is_over = True
+            xp_gain = self.opponent.xp_value
+            self.combat_log.append(f"You gained {xp_gain} XP!")
+            if self.player.add_xp(xp_gain):
+                self.leveled_up = True
+            loot = self.opponent.drop_loot()
+            if loot:
+                self.player.inventory.append(loot)
+                self.combat_log.append(f"You found a {loot.name}!")
+
+        self.selection_state = "main"
+        self.buttons = self._create_main_buttons()
+        self.turn = self.opponent
+        self._monster_turn()
 
     def _player_turn(self, action):
         if action == "attack":
@@ -92,6 +167,14 @@ class CombatScreen:
         draw_text(screen, f"HP: {self.opponent.hp}/{self.opponent.max_hp}", self.font, (255, 255, 255), 600, 150)
 
         # Draw buttons
+        if self.selection_state == "enhancement":
+            draw_text(screen, f"Enhance {self.selected_spell.name}", self.font, (255, 255, 255), 300, 200)
+            draw_text(screen, f"Level: {self.enhancement_level}", self.font, (255, 255, 255), 300, 250)
+
+            mana_cost = self.selected_spell.mana_cost + self.enhancement_level * (self.selected_spell.mana_cost // 2)
+            dl = self.selected_spell.dl + self.enhancement_level
+            draw_text(screen, f"Cost: {mana_cost} Mana, DL: {dl}", self.font, (255, 255, 255), 300, 300)
+
         for button in self.buttons.values():
             button.draw(screen)
 

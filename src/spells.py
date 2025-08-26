@@ -3,33 +3,39 @@ from dice import Die
 
 # --- Effect Functions ---
 
-def magic_light_effect(caster, target):
+def magic_light_effect(caster, target, enhancement_level=0):
     """Creates a magical light."""
+    # Enhancement could increase duration or brightness in the future
     print(f"A magical light illuminates the area around {caster.name}.")
 
-def healing_hand_effect(caster, target):
-    """Heals a target for 1d6 HP."""
+def healing_hand_effect(caster, target, enhancement_level=0):
+    """Heals a target for 1d6 HP (+1d6 per enhancement level)."""
     if target is None:
         target = caster
 
     d6 = Die()
     amount_to_heal = d6.roll()
+    for _ in range(enhancement_level):
+        amount_to_heal += d6.roll()
+
     target.heal(amount_to_heal)
     print(f"{caster.name}'s healing hand restores {amount_to_heal} HP to {target.name}.")
 
-def frostburn_effect(caster, target):
-    """Deals 1d6 damage to a target."""
+def frostburn_effect(caster, target, enhancement_level=0):
+    """Deals 1d6 damage to a target (+1 per enhancement level)."""
     if target:
         d6 = Die()
-        damage = d6.roll()
+        damage = d6.roll() + enhancement_level
         target.take_damage(damage)
         print(f"{caster.name}'s frostburn deals {damage} damage to {target.name}.")
 
-def lightning_bolt_effect(caster, target):
-    """Deals 2d6 damage to a target."""
+def lightning_bolt_effect(caster, target, enhancement_level=0):
+    """Deals 2d6 damage to a target (+1d6 per enhancement level)."""
     if target:
         d6 = Die()
         damage = d6.roll() + d6.roll()
+        for _ in range(enhancement_level):
+            damage += d6.roll()
         target.take_damage(damage)
         print(f"{caster.name}'s lightning bolt deals {damage} damage to {target.name}.")
 

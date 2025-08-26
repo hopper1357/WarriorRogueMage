@@ -52,6 +52,10 @@ class GameplayScreen:
             elif event.key == pygame.K_F5:
                 save_game(self.player)
                 self.save_message_timer = 120
+            elif event.key == pygame.K_d:
+                if self.player.sustained_spells:
+                    self.player.sustained_spells.clear()
+                    print("You have dismissed all sustained spells.")
         from main import GameState
         return GameState.GAMEPLAY
 
@@ -148,3 +152,8 @@ class GameplayScreen:
         draw_text(screen, f"A: {armor_name}", self.font, (255, 255, 255), 600, 580)
         if self.player.equipped_implement:
             draw_text(screen, f"I: {implement_name} ({self.player.equipped_implement.mana_pool}/{self.player.equipped_implement.max_mana})", self.font, (255, 255, 255), 400, 580)
+
+        # Display sustained spells
+        if self.player.sustained_spells:
+            penalty = self.player.get_sustained_penalty()
+            draw_text(screen, f"Sustained (Penalty: {penalty})", self.font, (255, 100, 100), 10, 480)

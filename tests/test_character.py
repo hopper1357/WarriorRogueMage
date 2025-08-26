@@ -109,7 +109,7 @@ def test_cast_spell_success(mock_roll):
 
     assert result is True
     assert char.mana == 5
-    mock_effect.assert_called_once_with(caster=char, target=None)
+    mock_effect.assert_called_once_with(caster=char, target=None, enhancement_level=0)
 
 @patch('dice.Die.roll')
 def test_cast_spell_failure_roll(mock_roll):
@@ -195,6 +195,7 @@ def test_cast_spell_with_armor_penalty(mock_roll):
 
     assert result is True
     assert char.mana == 4 # 10 - (5 + 1)
+    mock_effect.assert_called_once_with(caster=char, target=None, enhancement_level=0)
 
 def test_add_xp_and_level_up():
     char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)
@@ -253,6 +254,27 @@ def test_magic_implement_bonus(mock_roll):
     assert total == 10
 
 @patch('dice.Die.roll')
+def test_cast_enhanced_spell(mock_roll):
+    mock_roll.return_value = 10 # Success roll
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=4, skills=["Thaumaturgy"])
+    char.mana = 20
+
+    mock_effect = MagicMock()
+    # Base cost: 4 mana, DL 8
+    spell = Spell("Test Spell", circle=1, dl=8, mana_cost=4, effect=mock_effect)
+    char.spellbook.append(spell)
+
+    # Enhance twice:
+    # Mana cost = 4 (base) + 2 * (4/2) = 8
+    # DL = 8 + 2 = 10
+    # Attribute check: 10(roll) + 4(mage) + 2(skill) = 16. 16 >= 10 is True.
+    result = char.cast_spell(spell, enhancement_level=2)
+
+    assert result is True
+    assert char.mana == 12 # 20 - 8
+    mock_effect.assert_called_once_with(caster=char, target=None, enhancement_level=2)
+
+@patch('dice.Die.roll')
 def test_cast_spell_from_implement(mock_roll):
     mock_roll.return_value = 5 # Success roll
     char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
@@ -272,7 +294,8 @@ def test_cast_spell_from_implement(mock_roll):
     assert result is True
     assert char.mana == 20 # Character mana should not be used
     assert implement.mana_pool == 5 # Implement mana should be used
-    mock_effect.assert_called_once_with(caster=char, target=None)
+    mock_effect.assert_called_with(caster=char, target=None, enhancement_level=0)
+    assert mock_effect.call_count == 1
 
     # Cast from implement again, should succeed
     result = char.cast_spell(spell, use_implement=True)
@@ -288,3 +311,24 @@ def test_cast_spell_from_implement(mock_roll):
     result = char.cast_spell(spell, use_implement=False)
     assert result is True
     assert char.mana == 15 # Character mana should be used
+    assert mock_effect.call_count == 3
+    mock_effect.assert_called_with(caster=char, target=None, enhancement_level=0)
+
+@patch('dice.Die.roll')
+def test_sustained_spell_penalty(mock_roll):
+    mock_roll.return_value = 5
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+
+    sustained_spell = Spell("Sustained Spell", circle=1, dl=10, mana_cost=5, effect=lambda c,t,e: None, duration=10)
+    char.sustained_spells.append(sustained_spell)
+
+    # Total = 5 (roll) + 3 (mage) + 2 (skill) - 1 (penalty) = 9
+    success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
+    assert not success
+    assert total == 9
+
+    char.sustained_spells.pop()
+    # Total = 5 (roll) + 3 (mage) + 2 (skill) = 10
+    success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
+    assert success
+    assert total == 10
