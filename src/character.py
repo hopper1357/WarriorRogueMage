@@ -32,6 +32,7 @@ class Character(pygame.sprite.Sprite):
         self.equipped_weapon = None
         self.equipped_armor = None
         self.d6 = Die()
+        self.damage_resistances = {}
 
         # Advancement
         self.level = 1
@@ -40,6 +41,8 @@ class Character(pygame.sprite.Sprite):
 
         # Bonuses
         self.ranged_attack_bonus = 0
+        self.awareness_bonus = 0
+        self.lore_bonus = 0
 
         self.hp = 6 + self.attributes["warrior"]
         self.max_hp = self.hp
@@ -107,6 +110,13 @@ class Character(pygame.sprite.Sprite):
             roll += self.d6.exploding_roll()
 
         total = roll + attribute_value + skill_bonus
+
+        # Apply talent bonuses for specific skills
+        if "Awareness" in relevant_skills:
+            total += self.awareness_bonus
+        if "Lore" in relevant_skills:
+            total += self.lore_bonus
+
         return total
 
     def attribute_check(self, attribute, relevant_skills, dl):
@@ -124,7 +134,12 @@ class Character(pygame.sprite.Sprite):
         else:
             return None, self_total, opponent_total # Tie
 
-    def take_damage(self, damage):
+    def take_damage(self, damage, damage_type=None):
+        if damage_type and damage_type in self.damage_resistances:
+            resistance = self.damage_resistances[damage_type]
+            damage = int(damage * (1 - resistance))
+            print(f"{self.name} resists {damage_type} damage!")
+
         self.hp -= damage
         if self.hp < 0:
             self.hp = 0

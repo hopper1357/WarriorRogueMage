@@ -1,4 +1,6 @@
 from character import Character
+from items import all_items
+import random
 
 class NPC(Character):
     def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, dialogue="...", color=(0, 0, 255)):
@@ -6,9 +8,15 @@ class NPC(Character):
         self.dialogue = dialogue
 
 class Monster(Character):
-    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, color=(0, 255, 0), xp_value=0):
+    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, color=(0, 255, 0), xp_value=0, loot_table=None):
         super().__init__(name, x, y, warrior, rogue, mage, skills, talents, color)
         self.xp_value = xp_value
+        self.loot_table = loot_table if loot_table is not None else []
+
+    def drop_loot(self):
+        if self.loot_table:
+            return random.choice(self.loot_table)
+        return None
 
 class TownGuard(NPC):
     def __init__(self, x, y):
@@ -25,6 +33,7 @@ class TownGuard(NPC):
 
 class Goblin(Monster):
     def __init__(self, x, y):
+        loot_table = [all_items["dagger"], all_items["health_potion"]]
         super().__init__(
             name="Goblin",
             x=x, y=y,
@@ -33,5 +42,36 @@ class Goblin(Monster):
             mage=1,
             skills=["Daggers"],
             color=(0, 128, 0), # Dark Green
-            xp_value=50
+            xp_value=50,
+            loot_table=loot_table
         )
+
+class GiantRat(Monster):
+    def __init__(self, x, y):
+        super().__init__(
+            name="Giant Rat",
+            x=x, y=y,
+            warrior=1,
+            rogue=2,
+            mage=0,
+            skills=[],
+            color=(139, 69, 19), # Brown
+            xp_value=10,
+            loot_table=[]
+        )
+
+class Skeleton(Monster):
+    def __init__(self, x, y):
+        loot_table = [all_items["sword"]]
+        super().__init__(
+            name="Skeleton",
+            x=x, y=y,
+            warrior=3,
+            rogue=1,
+            mage=0,
+            skills=["Swords"],
+            color=(255, 255, 255), # White
+            xp_value=75,
+            loot_table=loot_table
+        )
+        self.damage_resistances = {"slashing": 0.5, "piercing": 0.5}

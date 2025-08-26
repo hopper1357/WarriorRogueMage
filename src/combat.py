@@ -54,7 +54,7 @@ class Combat:
             if damage < 0:
                 damage = 0
 
-            defender.take_damage(damage)
+            defender.take_damage(damage, weapon.damage_type)
             return True, total, damage
         else:
             return False, total, 0

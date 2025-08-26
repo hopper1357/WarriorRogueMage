@@ -1,6 +1,6 @@
 import pygame
 from character import Character
-from entities import TownGuard, Goblin
+from entities import TownGuard, Goblin, GiantRat, Skeleton
 from save_manager import save_game
 
 def draw_text(surface, text, font, color, x, y):
@@ -24,8 +24,10 @@ class GameplayScreen:
 
         self.monsters = pygame.sprite.Group()
         goblin = Goblin(x=600, y=400)
-        self.all_sprites.add(goblin)
-        self.monsters.add(goblin)
+        rat = GiantRat(x=200, y=500)
+        skeleton = Skeleton(x=700, y=100)
+        self.all_sprites.add(goblin, rat, skeleton)
+        self.monsters.add(goblin, rat, skeleton)
 
         self.player_speed = 5
         self.dialogue_to_show = None

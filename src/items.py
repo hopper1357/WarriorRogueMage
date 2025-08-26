@@ -7,11 +7,12 @@ class Item:
         return self.name
 
 class Weapon(Item):
-    def __init__(self, name, description, damage, skill, weapon_type):
+    def __init__(self, name, description, damage, skill, weapon_type, damage_type="blunt"):
         super().__init__(name, description)
         self.damage = damage
         self.skill = skill
         self.type = weapon_type
+        self.damage_type = damage_type
 
 class Armor(Item):
     def __init__(self, name, description, defense_bonus, armor_penalty):
@@ -34,18 +35,25 @@ unarmed_strike = Weapon(
     description="A basic unarmed attack.",
     damage="1d6-3",
     skill="Unarmed",
-    weapon_type="melee"
+    weapon_type="melee",
+    damage_type="blunt"
 )
 
 def heal_effect(character):
     character.heal(10)
+
+def restore_mana_effect(character):
+    character.mana += 10
+    if character.mana > character.max_mana:
+        character.mana = character.max_mana
 
 sword = Weapon(
     name="Sword",
     description="A simple sword.",
     damage="1d6",
     skill="Swords",
-    weapon_type="melee"
+    weapon_type="melee",
+    damage_type="slashing"
 )
 
 leather_armor = Armor(
@@ -61,10 +69,35 @@ health_potion = Potion(
     effect=heal_effect
 )
 
+dagger = Weapon(
+    name="Dagger",
+    description="A small dagger.",
+    damage="1d6-2",
+    skill="Daggers",
+    weapon_type="melee",
+    damage_type="piercing"
+)
+
+chain_mail = Armor(
+    name="Chain Mail",
+    description="A suit of chain mail.",
+    defense_bonus=3,
+    armor_penalty=2
+)
+
+mana_potion = Potion(
+    name="Mana Potion",
+    description="Restores 10 Mana.",
+    effect=restore_mana_effect
+)
+
 # A dictionary to easily access all items
 all_items = {
     "unarmed_strike": unarmed_strike,
     "sword": sword,
+    "dagger": dagger,
     "leather_armor": leather_armor,
+    "chain_mail": chain_mail,
     "health_potion": health_potion,
+    "mana_potion": mana_potion,
 }

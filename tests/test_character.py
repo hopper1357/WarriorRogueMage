@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from character import Character
 from spell import Spell
-from talents import tough_as_nails, marksman
+from talents import tough_as_nails, marksman, alertness, scholar
 from items import Weapon, Armor
 from unittest.mock import patch, MagicMock
 
@@ -211,3 +211,23 @@ def test_add_xp_and_level_up():
     assert char.level == 2
     assert char.xp == 10 # 110 - 100
     assert char.xp_to_next_level == 150 # 100 * 1.5
+
+@patch('dice.Die.roll')
+def test_talent_bonus_attribute_check(mock_roll):
+    mock_roll.return_value = 5
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3, skills=["Awareness"], talents=[alertness])
+    # Total = 5 (roll) + 3 (mage) + 2 (skill) + 1 (talent) = 11
+    success, total = char.attribute_check("mage", ["Awareness"], 11)
+    assert success
+    assert total == 11
+
+def test_damage_resistance():
+    char = Character("Test", x=0, y=0, warrior=5, rogue=2, mage=1)
+    char.damage_resistances = {"slashing": 0.5}
+    char.hp = 11
+
+    char.take_damage(10, "slashing")
+    assert char.hp == 6 # 11 - (10 * 0.5)
+
+    char.take_damage(4, "blunt")
+    assert char.hp == 2 # No resistance

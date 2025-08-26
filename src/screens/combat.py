@@ -47,10 +47,16 @@ class CombatScreen:
         if self.opponent.is_dead:
             self.winner = self.player
             self.is_over = True
+            # XP
             xp_gain = self.opponent.xp_value
             self.combat_log.append(f"You gained {xp_gain} XP!")
             if self.player.add_xp(xp_gain):
                 self.leveled_up = True
+            # Loot
+            loot = self.opponent.drop_loot()
+            if loot:
+                self.player.inventory.append(loot)
+                self.combat_log.append(f"You found a {loot.name}!")
 
         self.turn = self.opponent
         self._monster_turn()

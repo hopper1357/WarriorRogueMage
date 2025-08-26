@@ -2,6 +2,7 @@ import pygame
 from ui import Button
 from character import SKILLS
 from talents import all_talents
+from spells import all_spells
 from dice import Die
 
 def draw_text(surface, text, font, color, x, y):
@@ -25,6 +26,7 @@ class AdvancementScreen:
         buttons["hp_mana"] = Button(300, 220, 200, 50, "Increase HP/Mana", (0, 200, 0), (255, 255, 255))
         buttons["skill"] = Button(300, 290, 200, 50, "Gain Skill", (0, 200, 0), (255, 255, 255))
         buttons["talent"] = Button(300, 360, 200, 50, "Gain Talent", (0, 200, 0), (255, 255, 255))
+        buttons["spell"] = Button(300, 430, 200, 50, "Gain Spell", (0, 200, 0), (255, 255, 255))
         return buttons
 
     def _create_attribute_buttons(self):
@@ -64,6 +66,16 @@ class AdvancementScreen:
         buttons["back"] = Button(10, 550, 100, 40, "Back", (200, 200, 0), (0, 0, 0))
         return buttons
 
+    def _create_spell_buttons(self):
+        buttons = {}
+        y_offset = 0
+        for spell_key, spell in all_spells.items():
+            if spell not in self.player.spellbook:
+                buttons[spell_key] = Button(300, 150 + y_offset * 50, 200, 40, spell.name, (0, 200, 0), (255, 255, 255))
+                y_offset += 1
+        buttons["back"] = Button(10, 550, 100, 40, "Back", (200, 200, 0), (0, 0, 0))
+        return buttons
+
     def handle_event(self, event):
         for name, button in self.buttons.items():
             if button.is_clicked(event):
@@ -83,6 +95,9 @@ class AdvancementScreen:
             elif name == "talent":
                 self.selection_state = "talent"
                 self.buttons = self._create_talent_buttons()
+            elif name == "spell":
+                self.selection_state = "spell"
+                self.buttons = self._create_spell_buttons()
 
         elif self.selection_state == "attribute":
             if name in ["warrior", "rogue", "mage"]:
@@ -108,6 +123,15 @@ class AdvancementScreen:
                 talent = all_talents[name]
                 self.player.talents.append(talent)
                 talent.apply(self.player) # Apply the talent's effect immediately
+                self.is_done = True
+
+        elif self.selection_state == "spell":
+            if name == "back":
+                self.selection_state = "main"
+                self.buttons = self._create_main_buttons()
+            else: # A spell button was clicked
+                spell = all_spells[name]
+                self.player.spellbook.append(spell)
                 self.is_done = True
 
         elif self.selection_state == "hp_mana":

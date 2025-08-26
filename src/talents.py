@@ -33,6 +33,18 @@ def no_talent_for_magic_effect(character):
     character.max_mana = 0
     character.mana = 0
 
+def alertness_effect(character):
+    """Increases character's awareness bonus by 1."""
+    if not hasattr(character, 'awareness_bonus'):
+        character.awareness_bonus = 0
+    character.awareness_bonus += 1
+
+def scholar_effect(character):
+    """Increases character's lore bonus by 1."""
+    if not hasattr(character, 'lore_bonus'):
+        character.lore_bonus = 0
+    character.lore_bonus += 1
+
 # --- Talent Instances ---
 
 tough_as_nails = Talent(
@@ -75,6 +87,18 @@ no_talent_for_magic = Talent(
     talent_type="racial"
 )
 
+alertness = Talent(
+    name="Alertness",
+    description="+1 to Awareness checks.",
+    effect=alertness_effect
+)
+
+scholar = Talent(
+    name="Scholar",
+    description="+1 to Lore checks.",
+    effect=scholar_effect
+)
+
 # A dictionary to easily access all talents
 all_talents = {
     "tough_as_nails": tough_as_nails,
@@ -83,4 +107,6 @@ all_talents = {
     "sixth_sense": sixth_sense,
     "craftsman": craftsman,
     "no_talent_for_magic": no_talent_for_magic,
+    "alertness": alertness,
+    "scholar": scholar,
 }
