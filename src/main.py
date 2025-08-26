@@ -5,11 +5,13 @@ from character import Character
 from screens.character_creation import CharacterCreationScreen
 from screens.gameplay import GameplayScreen
 from screens.combat import CombatScreen
+from screens.inventory import InventoryScreen
 
 class GameState(Enum):
     CHARACTER_CREATION = 1
     GAMEPLAY = 2
     COMBAT = 3
+    INVENTORY = 4
 
 def main():
     pygame.init()
@@ -23,6 +25,7 @@ def main():
     creation_screen = CharacterCreationScreen()
     gameplay_screen = None
     combat_screen = None
+    inventory_screen = None
     player = None
     active_monster = None
 
@@ -35,15 +38,22 @@ def main():
             if game_state == GameState.CHARACTER_CREATION:
                 creation_screen.handle_event(event)
             elif game_state == GameState.GAMEPLAY:
-                gameplay_screen.handle_event(event)
+                new_state = gameplay_screen.handle_event(event)
+                if new_state == GameState.INVENTORY:
+                    inventory_screen = InventoryScreen(player)
+                    game_state = new_state
             elif game_state == GameState.COMBAT:
                 combat_screen.handle_event(event)
                 if combat_screen.is_over and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    # Remove the defeated monster
                     if combat_screen.winner == player:
                         active_monster.kill()
                     game_state = GameState.GAMEPLAY
                     combat_screen = None
+            elif game_state == GameState.INVENTORY:
+                inventory_screen.handle_event(event)
+                if inventory_screen.is_done:
+                    game_state = GameState.GAMEPLAY
+                    inventory_screen = None
 
 
         screen.fill((0,0,0))
@@ -64,6 +74,9 @@ def main():
         elif game_state == GameState.COMBAT:
             combat_screen.update()
             combat_screen.draw(screen)
+        elif game_state == GameState.INVENTORY:
+            inventory_screen.update()
+            inventory_screen.draw(screen)
 
         pygame.display.flip()
 

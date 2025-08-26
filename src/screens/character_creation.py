@@ -4,6 +4,7 @@ from character import Character, SKILLS
 from spells import all_spells
 from races import all_races
 from talents import all_talents
+from items import all_items
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -107,6 +108,13 @@ class CharacterCreationScreen:
                 if self.character.attributes["mage"] > 0:
                     self.character.spellbook.append(all_spells["magic_light"])
                     self.character.spellbook.append(all_spells["healing_hand"])
+
+                # Add starting items
+                self.character.inventory.append(all_items["sword"])
+                self.character.inventory.append(all_items["leather_armor"])
+                self.character.inventory.append(all_items["health_potion"])
+                self.character.equip(all_items["sword"])
+
                 self.is_done = True
 
     def update(self):

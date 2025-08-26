@@ -1,12 +1,6 @@
 from character import Character
 from dice import Die
-
-WEAPONS = {
-    "Sword": {"damage": "1d6", "skill": "Swords", "type": "melee"},
-    "Dagger": {"damage": "1d6-2", "skill": "Daggers", "type": "melee"},
-    "Axe": {"damage": "1d6+1", "skill": "Axes", "type": "melee"},
-    "Bow": {"damage": "1d6", "skill": "Bows", "type": "ranged"},
-}
+from items import Weapon
 
 class Combat:
     def __init__(self, char1, char2):
@@ -26,30 +20,28 @@ class Combat:
             # Reroll on tie
             return self.determine_initiative()
 
-    def attack(self, attacker, defender, weapon_name):
-        if weapon_name not in WEAPONS:
-            raise ValueError(f"Unknown weapon: {weapon_name}")
-
-        weapon = WEAPONS[weapon_name]
+    def attack(self, attacker, defender, weapon):
+        if not isinstance(weapon, Weapon):
+            raise TypeError("Provided weapon is not a valid Weapon object.")
 
         # Attack roll
-        attack_skill = weapon["skill"]
-        if weapon["type"] == "ranged":
+        attack_skill = weapon.skill
+        if weapon.type == "ranged":
             attack_attribute = "rogue"
             attack_bonus = attacker.ranged_attack_bonus
         else:
             attack_attribute = "warrior"
             attack_bonus = 0 # No melee bonus for now
 
-        # The DL for the attack is the defender's defense
-        dl = defender.defense
+        # The DL for the attack is the defender's total defense
+        dl = defender.total_defense
         _, total = attacker.attribute_check(attack_attribute, [attack_skill], dl)
         total += attack_bonus
         success = total >= dl
 
         if success:
             # Damage roll
-            damage_str = weapon["damage"]
+            damage_str = weapon.damage
             damage_roll = self.d6.exploding_roll() # Damage rolls always explode
 
             modifier = 0

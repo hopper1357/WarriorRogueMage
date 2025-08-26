@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from character import Character
 from spell import Spell
 from talents import tough_as_nails, marksman
+from items import Weapon, Armor
 from unittest.mock import patch, MagicMock
 
 def test_character_initialization():
@@ -160,3 +161,37 @@ def test_character_with_talents():
     assert char.hp == 11
     # marksman should give +1 ranged attack bonus
     assert char.ranged_attack_bonus == 1
+
+def test_equipment():
+    char = Character("Test", x=0, y=0, warrior=3, rogue=2, mage=3)
+    assert char.total_defense == 6 # (3+2)//2 + 4 = 6
+
+    leather_armor = Armor("Leather Armor", "Some leather armor", defense_bonus=1, armor_penalty=1)
+    char.inventory.append(leather_armor)
+    char.equip(leather_armor)
+
+    assert char.equipped_armor == leather_armor
+    assert char.total_defense == 7 # 6 + 1
+
+    char.unequip(leather_armor)
+    assert char.equipped_armor is None
+    assert char.total_defense == 6
+
+@patch('dice.Die.roll')
+def test_cast_spell_with_armor_penalty(mock_roll):
+    mock_roll.return_value = 5 # Success roll
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+    char.mana = 10
+
+    mock_effect = MagicMock()
+    spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
+    char.spellbook.append(spell)
+
+    leather_armor = Armor("Leather Armor", "Some leather armor", defense_bonus=1, armor_penalty=1)
+    char.inventory.append(leather_armor)
+    char.equip(leather_armor)
+
+    result = char.cast_spell(spell)
+
+    assert result is True
+    assert char.mana == 4 # 10 - (5 + 1)

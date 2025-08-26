@@ -35,9 +35,14 @@ class GameplayScreen:
             if event.key == pygame.K_1:
                 if len(self.player.spellbook) > 0:
                     self.player.cast_spell(self.player.spellbook[0])
-            if event.key == pygame.K_2:
+            elif event.key == pygame.K_2:
                 if len(self.player.spellbook) > 1:
                     self.player.cast_spell(self.player.spellbook[1])
+            elif event.key == pygame.K_i:
+                from main import GameState
+                return GameState.INVENTORY
+        from main import GameState
+        return GameState.GAMEPLAY
 
     def update(self, screen):
         # Player movement
@@ -89,9 +94,16 @@ class GameplayScreen:
         draw_text(screen, f"HP: {self.player.hp}/{self.player.max_hp}", self.font, (255, 255, 255), 10, 510)
         draw_text(screen, f"Mana: {self.player.mana}/{self.player.max_mana}", self.font, (255, 255, 255), 10, 550)
         draw_text(screen, f"Fate: {self.player.fate}", self.font, (255, 255, 255), 200, 510)
-        draw_text(screen, f"Defense: {self.player.defense}", self.font, (255, 255, 255), 200, 550)
+        draw_text(screen, f"Defense: {self.player.total_defense}", self.font, (255, 255, 255), 200, 550)
 
         # Display spells
         draw_text(screen, "Spells:", self.font, (255, 255, 255), 400, 510)
         for i, spell in enumerate(self.player.spellbook):
             draw_text(screen, f"({i+1}) {spell.name}", self.font, (255, 255, 255), 400, 550 + i * 40)
+
+        # Display equipped items
+        draw_text(screen, "Equipped:", self.font, (255, 255, 255), 600, 510)
+        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
+        armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
+        draw_text(screen, f"W: {weapon_name}", self.font, (255, 255, 255), 600, 550)
+        draw_text(screen, f"A: {armor_name}", self.font, (255, 255, 255), 600, 580)

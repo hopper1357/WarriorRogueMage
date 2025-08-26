@@ -2,6 +2,7 @@ import pygame
 from character import Character
 from combat import Combat
 from ui import Button
+from items import all_items
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -35,11 +36,12 @@ class CombatScreen:
 
     def _player_turn(self, action):
         if action == "attack":
-            success, total, damage = self.combat.attack(self.player, self.opponent, "Sword") # Assuming Sword for now
+            weapon = self.player.equipped_weapon or all_items["unarmed_strike"]
+            success, total, damage = self.combat.attack(self.player, self.opponent, weapon)
             if success:
-                self.combat_log.append(f"You hit for {damage} damage!")
+                self.combat_log.append(f"You hit for {damage} damage with {weapon.name}!")
             else:
-                self.combat_log.append("You missed!")
+                self.combat_log.append(f"You missed with {weapon.name}!")
 
         if self.opponent.is_dead:
             self.winner = self.player
@@ -51,11 +53,12 @@ class CombatScreen:
     def _monster_turn(self):
         if self.is_over: return
 
-        success, total, damage = self.combat.attack(self.opponent, self.player, "Dagger") # Assuming Dagger for now
+        weapon = self.opponent.equipped_weapon or all_items["unarmed_strike"]
+        success, total, damage = self.combat.attack(self.opponent, self.player, weapon)
         if success:
-            self.combat_log.append(f"{self.opponent.name} hits for {damage} damage!")
+            self.combat_log.append(f"{self.opponent.name} hits for {damage} damage with {weapon.name}!")
         else:
-            self.combat_log.append(f"{self.opponent.name} missed!")
+            self.combat_log.append(f"{self.opponent.name} missed with {weapon.name}!")
 
         if self.player.is_dead:
             self.winner = self.opponent

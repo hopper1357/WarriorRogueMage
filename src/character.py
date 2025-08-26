@@ -2,6 +2,7 @@ import pygame
 from dice import Die
 from spell import Spell
 from talent import Talent
+from items import Weapon, Armor
 
 SKILLS = {
     "warrior": ["Axes", "Blunt", "Polearms", "Riding", "Swords", "Unarmed"],
@@ -27,6 +28,9 @@ class Character(pygame.sprite.Sprite):
         self.skills = skills if skills is not None else []
         self.talents = talents if talents is not None else []
         self.spellbook = []
+        self.inventory = []
+        self.equipped_weapon = None
+        self.equipped_armor = None
         self.d6 = Die()
 
         # Bonuses
@@ -47,6 +51,39 @@ class Character(pygame.sprite.Sprite):
     def apply_talents(self):
         for talent in self.talents:
             talent.apply(self)
+
+    def equip(self, item):
+        if item not in self.inventory:
+            print(f"{self.name} does not have {item.name} in their inventory.")
+            return
+
+        if isinstance(item, Weapon):
+            if self.equipped_weapon:
+                self.unequip(self.equipped_weapon)
+            self.equipped_weapon = item
+            print(f"{self.name} equipped {item.name}.")
+        elif isinstance(item, Armor):
+            if self.equipped_armor:
+                self.unequip(self.equipped_armor)
+            self.equipped_armor = item
+            print(f"{self.name} equipped {item.name}.")
+        else:
+            print(f"{item.name} is not an equippable item.")
+
+    def unequip(self, item):
+        if item == self.equipped_weapon:
+            self.equipped_weapon = None
+            print(f"{self.name} unequipped {item.name}.")
+        elif item == self.equipped_armor:
+            self.equipped_armor = None
+            print(f"{self.name} unequipped {item.name}.")
+        else:
+            print(f"{item.name} is not equipped.")
+
+    @property
+    def total_defense(self):
+        bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
+        return self.defense + bonus
 
     def _get_attribute_check_total(self, attribute, relevant_skills):
         if attribute not in self.attributes:
@@ -97,7 +134,11 @@ class Character(pygame.sprite.Sprite):
             print(f"{self.name} does not know the spell {spell.name}.")
             return False
 
-        if self.mana < spell.mana_cost:
+        mana_cost = spell.mana_cost
+        if self.equipped_armor:
+            mana_cost += self.equipped_armor.armor_penalty
+
+        if self.mana < mana_cost:
             print(f"{self.name} does not have enough mana to cast {spell.name}.")
             return False
 
@@ -107,13 +148,13 @@ class Character(pygame.sprite.Sprite):
 
         if success:
             print(f"{self.name} successfully casts {spell.name} (Total: {total}).")
-            self.mana -= spell.mana_cost
+            self.mana -= mana_cost
             spell.effect(caster=self, target=target)
             return True
         else:
             print(f"{self.name} failed to cast {spell.name} (Total: {total}).")
             # According to WR&M rules, mana is still consumed on a failed casting roll
-            self.mana -= spell.mana_cost
+            self.mana -= mana_cost
             return False
 
     @property
