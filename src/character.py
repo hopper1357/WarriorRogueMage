@@ -5,6 +5,7 @@ from talent import Talent
 from items import Weapon, Armor, MagicImplement
 from talents import all_talents
 import ritual
+import quest
 
 SKILLS = {
     "warrior": ["Axes", "Blunt", "Polearms", "Riding", "Swords", "Unarmed"],
@@ -32,6 +33,7 @@ class Character(pygame.sprite.Sprite):
         self.spellbook = []
         self.sustained_spells = []
         self.inventory = []
+        self.journal = []
         self.equipped_weapon = None
         self.equipped_armor = None
         self.equipped_implement = None
@@ -263,6 +265,17 @@ class Character(pygame.sprite.Sprite):
             leveled_up = True
             print(f"{self.name} has reached level {self.level}!")
         return leveled_up
+
+    def add_quest(self, quest: 'quest.Quest'):
+        if quest not in self.journal:
+            self.journal.append(quest)
+            print(f"New quest added to journal: {quest.title}")
+
+    def get_quest(self, quest_title):
+        for quest in self.journal:
+            if quest.title == quest_title:
+                return quest
+        return None
 
     def __str__(self):
         return (

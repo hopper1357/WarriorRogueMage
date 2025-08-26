@@ -3,6 +3,7 @@ from character import Character
 from entities import TownGuard, Goblin, GiantRat, Skeleton
 from save_manager import save_game
 from tilemap import Map, Camera
+from event_manager import event_manager
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -38,6 +39,13 @@ class GameplayScreen:
         self.active_monster = None
         self.save_message_timer = 0
 
+        self._subscribe_quests()
+
+    def _subscribe_quests(self):
+        for quest in self.player.journal:
+            for objective in quest.objectives:
+                event_manager.subscribe("monster_killed", objective.update)
+
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1:
@@ -52,12 +60,14 @@ class GameplayScreen:
             elif event.key == pygame.K_F5:
                 save_game(self.player)
                 self.save_message_timer = 120
+            elif event.key == pygame.K_j:
+                from main import GameState
+                return GameState.JOURNAL
             elif event.key == pygame.K_d:
                 if self.player.sustained_spells:
                     self.player.sustained_spells.clear()
                     print("You have dismissed all sustained spells.")
-        from main import GameState
-        return GameState.GAMEPLAY
+        return None
 
     def update(self, screen):
         # Player movement
@@ -87,6 +97,9 @@ class GameplayScreen:
         for npc in self.npcs:
             if self.player.rect.colliderect(npc.rect.inflate(20, 20))):
                 self.dialogue_to_show = npc.dialogue
+                if npc.quest_to_give and self.player.get_quest(npc.quest_to_give.title) is None:
+                    self.player.add_quest(npc.quest_to_give)
+                    self._subscribe_quests() # Resubscribe to include the new quest
                 break
 
         for monster in self.monsters:
