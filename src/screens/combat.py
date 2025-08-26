@@ -4,6 +4,7 @@ from combat import Combat
 from ui import Button
 from items import all_items
 from spells import all_spells
+from event_manager import event_manager
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -104,6 +105,7 @@ class CombatScreen:
             if loot:
                 self.player.inventory.append(loot)
                 self.combat_log.append(f"You found a {loot.name}!")
+            event_manager.post({"type": "monster_killed", "name": self.opponent.name})
 
         self.selection_state = "main"
         self.buttons = self._create_main_buttons()
@@ -132,6 +134,7 @@ class CombatScreen:
             if loot:
                 self.player.inventory.append(loot)
                 self.combat_log.append(f"You found a {loot.name}!")
+            event_manager.post({"type": "monster_killed", "name": self.opponent.name})
 
         self.turn = self.opponent
         self._monster_turn()

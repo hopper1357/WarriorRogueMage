@@ -8,6 +8,7 @@ from screens.gameplay import GameplayScreen
 from screens.combat import CombatScreen
 from screens.inventory import InventoryScreen
 from screens.advancement import AdvancementScreen
+from screens.journal import JournalScreen
 from save_manager import load_game, save_game
 
 class GameState(Enum):
@@ -17,6 +18,7 @@ class GameState(Enum):
     COMBAT = 3
     INVENTORY = 4
     ADVANCEMENT = 5
+    JOURNAL = 6
 
 def main():
     pygame.init()
@@ -33,6 +35,7 @@ def main():
     combat_screen = None
     inventory_screen = None
     advancement_screen = None
+    journal_screen = None
     player = None
     active_monster = None
 
@@ -48,10 +51,13 @@ def main():
             elif game_state == GameState.CHARACTER_CREATION:
                 creation_screen.handle_event(event)
             elif game_state == GameState.GAMEPLAY:
-                new_state = gameplay_screen.handle_event(event)
-                if new_state == GameState.INVENTORY:
-                    inventory_screen = InventoryScreen(player)
-                    game_state = new_state
+                new_state_from_event = gameplay_screen.handle_event(event)
+                if new_state_from_event:
+                    game_state = new_state_from_event
+                    if game_state == GameState.INVENTORY:
+                        inventory_screen = InventoryScreen(player)
+                    elif game_state == GameState.JOURNAL:
+                        journal_screen = JournalScreen(player)
             elif game_state == GameState.COMBAT:
                 combat_screen.handle_event(event)
                 if combat_screen.is_over and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -63,7 +69,7 @@ def main():
                         else:
                             game_state = GameState.GAMEPLAY
                     else: # Player lost
-                        game_state = GameState.MAIN_MENU # Or a game over screen
+                        game_state = GameState.MAIN_MENU
                     combat_screen = None
             elif game_state == GameState.INVENTORY:
                 inventory_screen.handle_event(event)
@@ -75,6 +81,11 @@ def main():
                 if advancement_screen.is_done:
                     game_state = GameState.GAMEPLAY
                     advancement_screen = None
+            elif game_state == GameState.JOURNAL:
+                journal_screen.handle_event(event)
+                if journal_screen.is_done:
+                    game_state = GameState.GAMEPLAY
+                    journal_screen = None
 
 
         # State transitions and drawing
@@ -91,7 +102,7 @@ def main():
                 if player:
                     gameplay_screen = GameplayScreen(player)
                     game_state = GameState.GAMEPLAY
-                else: # If load fails, go back to menu
+                else:
                     main_menu_screen.selected_option = None
             elif main_menu_screen.selected_option == "quit":
                 running = False
@@ -105,10 +116,10 @@ def main():
                 game_state = GameState.GAMEPLAY
 
         elif game_state == GameState.GAMEPLAY:
-            new_state, active_monster = gameplay_screen.update(screen)
-            if new_state == GameState.COMBAT:
+            new_state_from_update, active_monster = gameplay_screen.update(screen)
+            if new_state_from_update == GameState.COMBAT:
                 combat_screen = CombatScreen(player, active_monster)
-            game_state = new_state
+                game_state = new_state_from_update
             gameplay_screen.draw(screen)
 
         elif game_state == GameState.COMBAT:
@@ -122,6 +133,10 @@ def main():
         elif game_state == GameState.ADVANCEMENT:
             advancement_screen.update()
             advancement_screen.draw(screen)
+
+        elif game_state == GameState.JOURNAL:
+            journal_screen.update()
+            journal_screen.draw(screen)
 
         pygame.display.flip()
 

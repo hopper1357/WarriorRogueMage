@@ -7,6 +7,7 @@ from spell import Spell
 from talents import tough_as_nails, marksman, alertness, scholar, blood_mage
 from items import Weapon, Armor, MagicImplement
 from ritual import Ritual
+from quest import Quest
 from unittest.mock import patch, MagicMock
 
 def test_character_initialization():
@@ -253,6 +254,17 @@ def test_magic_implement_bonus(mock_roll):
     success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
     assert success
     assert total == 10
+
+def test_journal():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)
+    assert len(char.journal) == 0
+
+    quest = Quest("Test Quest", "A quest for testing.", [], lambda p: None)
+    char.add_quest(quest)
+
+    assert len(char.journal) == 1
+    assert char.get_quest("Test Quest") == quest
+    assert char.get_quest("Non-existent Quest") is None
 
 def test_contribute_to_ritual():
     char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3)

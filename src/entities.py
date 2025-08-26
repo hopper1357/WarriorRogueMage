@@ -1,11 +1,13 @@
 from character import Character
 from items import all_items
+from quests import all_quests
 import random
 
 class NPC(Character):
-    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, dialogue="...", color=(0, 0, 255)):
+    def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, dialogue="...", color=(0, 0, 255), quest_to_give=None):
         super().__init__(name, x, y, warrior, rogue, mage, skills, talents, color)
         self.dialogue = dialogue
+        self.quest_to_give = quest_to_give
 
 class Monster(Character):
     def __init__(self, name, x, y, warrior, rogue, mage, skills=None, talents=None, color=(0, 255, 0), xp_value=0, loot_table=None):
@@ -27,8 +29,9 @@ class TownGuard(NPC):
             rogue=2,
             mage=0,
             skills=["Swords", "Awareness"],
-            dialogue="Move along, citizen.",
-            color=(192, 192, 192) # Silver
+            dialogue="There's a goblin lurking nearby. Get rid of it!",
+            color=(192, 192, 192), # Silver
+            quest_to_give=all_quests["goblin_menace"]
         )
 
 class Goblin(Monster):
