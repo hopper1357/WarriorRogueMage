@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from character import Character
 from spell import Spell
+from talents import tough_as_nails, marksman
 from unittest.mock import patch, MagicMock
 
 def test_character_initialization():
@@ -151,3 +152,11 @@ def test_cast_spell_failure_unknown_spell():
     assert result is False
     assert char.mana == 10
     mock_effect.assert_not_called()
+
+def test_character_with_talents():
+    char = Character("Test", warrior=3, rogue=4, mage=2, talents=[tough_as_nails, marksman])
+    # tough_as_nails should increase hp by 2
+    assert char.max_hp == 11 # 6 + 3 (warrior) + 2 (talent)
+    assert char.hp == 11
+    # marksman should give +1 ranged attack bonus
+    assert char.ranged_attack_bonus == 1

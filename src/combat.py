@@ -2,10 +2,10 @@ from character import Character
 from dice import Die
 
 WEAPONS = {
-    "Sword": {"damage": "1d6", "skill": "Swords"},
-    "Dagger": {"damage": "1d6-2", "skill": "Daggers"},
-    "Axe": {"damage": "1d6+1", "skill": "Axes"},
-    "Bow": {"damage": "1d6", "skill": "Bows"},
+    "Sword": {"damage": "1d6", "skill": "Swords", "type": "melee"},
+    "Dagger": {"damage": "1d6-2", "skill": "Daggers", "type": "melee"},
+    "Axe": {"damage": "1d6+1", "skill": "Axes", "type": "melee"},
+    "Bow": {"damage": "1d6", "skill": "Bows", "type": "ranged"},
 }
 
 class Combat:
@@ -33,11 +33,19 @@ class Combat:
         weapon = WEAPONS[weapon_name]
 
         # Attack roll
-        attack_attribute = "warrior" # Assuming warrior for melee/ranged for now
         attack_skill = weapon["skill"]
+        if weapon["type"] == "ranged":
+            attack_attribute = "rogue"
+            attack_bonus = attacker.ranged_attack_bonus
+        else:
+            attack_attribute = "warrior"
+            attack_bonus = 0 # No melee bonus for now
 
         # The DL for the attack is the defender's defense
-        success, total = attacker.attribute_check(attack_attribute, [attack_skill], defender.defense)
+        dl = defender.defense
+        _, total = attacker.attribute_check(attack_attribute, [attack_skill], dl)
+        total += attack_bonus
+        success = total >= dl
 
         if success:
             # Damage roll

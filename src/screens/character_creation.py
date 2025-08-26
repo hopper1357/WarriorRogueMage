@@ -2,6 +2,8 @@ import pygame
 from ui import Button
 from character import Character, SKILLS
 from spells import all_spells
+from races import all_races
+from talents import all_talents
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -15,6 +17,8 @@ class CharacterCreationScreen:
         self.attributes = {"warrior": 0, "rogue": 0, "mage": 0}
         self.points = 10
         self.selected_skills = []
+        self.selected_race = None
+        self.selected_talent = None
         self.is_done = False
         self.character = None
 
@@ -25,18 +29,29 @@ class CharacterCreationScreen:
 
         # Attribute buttons
         for i, attr in enumerate(self.attributes.keys()):
-            buttons[f"{attr}_inc"] = Button(200, 100 + i * 50, 40, 40, "+", (0, 255, 0), (0, 0, 0))
-            buttons[f"{attr}_dec"] = Button(250, 100 + i * 50, 40, 40, "-", (255, 0, 0), (0, 0, 0))
+            buttons[f"attr_{attr}_inc"] = Button(200, 100 + i * 50, 40, 40, "+", (0, 255, 0), (0, 0, 0))
+            buttons[f"attr_{attr}_dec"] = Button(250, 100 + i * 50, 40, 40, "-", (255, 0, 0), (0, 0, 0))
 
         # Skill buttons
         y_offset = 0
         for attr, skills in SKILLS.items():
             for skill in skills:
-                buttons[skill] = Button(400, 100 + y_offset * 40, 150, 30, skill, (100, 100, 100), (255, 255, 255))
+                buttons[f"skill_{skill}"] = Button(320, 100 + y_offset * 40, 150, 30, skill, (100, 100, 100), (255, 255, 255))
+                y_offset += 1
+
+        # Race buttons
+        for i, race_name in enumerate(all_races.keys()):
+            buttons[f"race_{race_name}"] = Button(500, 100 + i * 50, 150, 40, all_races[race_name]["name"], (100, 100, 100), (255, 255, 255))
+
+        # Talent buttons
+        y_offset = 0
+        for talent_key, talent in all_talents.items():
+            if talent.type == "general":
+                buttons[f"talent_{talent_key}"] = Button(680, 100 + y_offset * 50, 200, 40, talent.name, (100, 100, 100), (255, 255, 255))
                 y_offset += 1
 
         # Start game button
-        buttons["start"] = Button(300, 500, 200, 50, "Start Game", (0, 255, 0), (0, 0, 0))
+        buttons["start"] = Button(350, 500, 200, 50, "Start Game", (100, 100, 100), (0, 0, 0))
 
         return buttons
 
@@ -46,29 +61,21 @@ class CharacterCreationScreen:
                 self._handle_button_press(name)
 
     def _handle_button_press(self, name):
-        if name.endswith("_inc"):
-            attr = name.split("_")[0]
-            if self.points > 0 and self.attributes[attr] < 6:
+        if name.startswith("attr_"):
+            parts = name.split("_")
+            attr = parts[1]
+            op = parts[2]
+            if op == "inc" and self.points > 0 and self.attributes[attr] < 6:
                 self.attributes[attr] += 1
                 self.points -= 1
-        elif name.endswith("_dec"):
-            attr = name.split("_")[0]
-            if self.attributes[attr] > 0:
+            elif op == "dec" and self.attributes[attr] > 0:
                 self.attributes[attr] -= 1
                 self.points += 1
-        elif name == "start":
-            if self.points == 0 and len(self.selected_skills) == 3:
-                self.character = Character("Player", self.attributes["warrior"], self.attributes["rogue"], self.attributes["mage"], self.selected_skills)
-                if self.character.attributes["mage"] > 0:
-                    self.character.spellbook.append(all_spells["magic_light"])
-                    self.character.spellbook.append(all_spells["healing_hand"])
-                self.is_done = True
-        else: # Skill button
-            skill = name
+        elif name.startswith("skill_"):
+            skill = name.split("_")[1]
             if skill in self.selected_skills:
                 self.selected_skills.remove(skill)
             elif len(self.selected_skills) < 3:
-                # Check if the character has points in the required attribute
                 skill_attr = None
                 for attr, skills in SKILLS.items():
                     if skill in skills:
@@ -76,21 +83,51 @@ class CharacterCreationScreen:
                         break
                 if skill_attr and self.attributes[skill_attr] > 0:
                     self.selected_skills.append(skill)
+        elif name.startswith("race_"):
+            race_key = name.split("_")[1]
+            self.selected_race = all_races[race_key]
+        elif name.startswith("talent_"):
+            talent_key = name.split("_")[1]
+            self.selected_talent = all_talents[talent_key]
+        elif name == "start":
+            if self.points == 0 and len(self.selected_skills) == 3 and self.selected_race and self.selected_talent:
+
+                final_talents = self.selected_race["talents"] + [self.selected_talent]
+
+                self.character = Character("Player", self.attributes["warrior"], self.attributes["rogue"], self.attributes["mage"], self.selected_skills, final_talents)
+
+                if self.character.attributes["mage"] > 0:
+                    self.character.spellbook.append(all_spells["magic_light"])
+                    self.character.spellbook.append(all_spells["healing_hand"])
+                self.is_done = True
 
     def update(self):
         # Update button colors based on state
-        for skill, button in self.buttons.items():
-            if skill in SKILLS["warrior"] or skill in SKILLS["rogue"] or skill in SKILLS["mage"]:
+        for name, button in self.buttons.items():
+            if name.startswith("skill_"):
+                skill = name.split("_")[1]
                 if skill in self.selected_skills:
-                    button.color = (0, 200, 0) # Green
+                    button.color = (0, 200, 0)
                 else:
-                    button.color = (100, 100, 100) # Gray
+                    button.color = (100, 100, 100)
+            elif name.startswith("race_"):
+                race_key = name.split("_")[1]
+                if self.selected_race and self.selected_race["name"] == all_races[race_key]["name"]:
+                    button.color = (0, 200, 0)
+                else:
+                    button.color = (100, 100, 100)
+            elif name.startswith("talent_"):
+                talent_key = name.split("_")[1]
+                if self.selected_talent and self.selected_talent.name == all_talents[talent_key].name:
+                    button.color = (0, 200, 0)
+                else:
+                    button.color = (100, 100, 100)
 
         # Enable/disable start button
-        if self.points == 0 and len(self.selected_skills) == 3:
-            self.buttons["start"].color = (0, 255, 0) # Green
+        if self.points == 0 and len(self.selected_skills) == 3 and self.selected_race and self.selected_talent:
+            self.buttons["start"].color = (0, 255, 0)
         else:
-            self.buttons["start"].color = (100, 100, 100) # Gray
+            self.buttons["start"].color = (100, 100, 100)
 
     def draw(self, screen):
         screen.fill((0, 0, 0))
@@ -102,9 +139,18 @@ class CharacterCreationScreen:
             draw_text(screen, f"{attr.capitalize()}: {value}", self.font, (255, 255, 255), 10, 100 + i * 50)
 
         # Draw skills
-        draw_text(screen, "Selected Skills:", self.font, (255, 255, 255), 10, 300)
-        for i, skill in enumerate(self.selected_skills):
-            draw_text(screen, skill, self.font, (255, 255, 255), 10, 340 + i * 40)
+        draw_text(screen, "Skills:", self.font, (255, 255, 255), 320, 50)
+
+        # Draw races
+        draw_text(screen, "Race:", self.font, (255, 255, 255), 500, 50)
+
+        # Draw talents
+        draw_text(screen, "Talent:", self.font, (255, 255, 255), 680, 50)
+
+        # Draw selected info
+        draw_text(screen, f"Selected Race: {self.selected_race['name'] if self.selected_race else 'None'}", self.font, (255, 255, 255), 10, 300)
+        draw_text(screen, f"Selected Talent: {self.selected_talent.name if self.selected_talent else 'None'}", self.font, (255, 255, 255), 10, 340)
+        draw_text(screen, f"Selected Skills: {', '.join(self.selected_skills)}", self.font, (255, 255, 255), 10, 380)
 
         # Draw buttons
         for button in self.buttons.values():

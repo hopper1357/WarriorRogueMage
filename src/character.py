@@ -1,5 +1,6 @@
 from dice import Die
 from spell import Spell
+from talent import Talent
 
 SKILLS = {
     "warrior": ["Axes", "Blunt", "Polearms", "Riding", "Swords", "Unarmed"],
@@ -8,7 +9,7 @@ SKILLS = {
 }
 
 class Character:
-    def __init__(self, name, warrior, rogue, mage, skills=None):
+    def __init__(self, name, warrior, rogue, mage, skills=None, talents=None):
         self.name = name
         self.attributes = {
             "warrior": warrior,
@@ -16,8 +17,12 @@ class Character:
             "mage": mage,
         }
         self.skills = skills if skills is not None else []
+        self.talents = talents if talents is not None else []
         self.spellbook = []
         self.d6 = Die()
+
+        # Bonuses
+        self.ranged_attack_bonus = 0
 
         self.hp = 6 + self.attributes["warrior"]
         self.max_hp = self.hp
@@ -28,6 +33,12 @@ class Character:
         self.max_mana = self.mana
 
         self.defense = (self.attributes["warrior"] + self.attributes["rogue"]) // 2 + 4
+
+        self.apply_talents()
+
+    def apply_talents(self):
+        for talent in self.talents:
+            talent.apply(self)
 
     def _get_attribute_check_total(self, attribute, relevant_skills):
         if attribute not in self.attributes:
