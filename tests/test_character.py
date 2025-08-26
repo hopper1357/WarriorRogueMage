@@ -4,8 +4,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from character import Character
 from spell import Spell
-from talents import tough_as_nails, marksman, alertness, scholar
+from talents import tough_as_nails, marksman, alertness, scholar, blood_mage
 from items import Weapon, Armor, MagicImplement
+from ritual import Ritual
 from unittest.mock import patch, MagicMock
 
 def test_character_initialization():
@@ -252,6 +253,33 @@ def test_magic_implement_bonus(mock_roll):
     success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
     assert success
     assert total == 10
+
+def test_contribute_to_ritual():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3)
+    char.mana = 20
+    char.hp = 20
+
+    spell = Spell("Ritual Spell", 4, 13, 50, lambda c,t,e: None)
+    ritual = Ritual(spell, char)
+
+    # Contribute mana normally
+    result = char.contribute_to_ritual(ritual, 10)
+    assert result is True
+    assert char.mana == 10
+    assert ritual.total_mana_pooled == 10
+
+    # Try to contribute with HP without talent
+    result = char.contribute_to_ritual(ritual, 5, from_hp=True)
+    assert result is False
+    assert char.hp == 20
+    assert ritual.total_mana_pooled == 10
+
+    # Give talent and contribute with HP
+    char.talents.append(blood_mage)
+    result = char.contribute_to_ritual(ritual, 5, from_hp=True)
+    assert result is True
+    assert char.hp == 15
+    assert ritual.total_mana_pooled == 15
 
 @patch('dice.Die.roll')
 def test_cast_enhanced_spell(mock_roll):

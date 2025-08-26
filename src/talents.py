@@ -45,6 +45,10 @@ def scholar_effect(character):
         character.lore_bonus = 0
     character.lore_bonus += 1
 
+def blood_mage_effect(character):
+    """Allows sacrificing HP for Mana in rituals."""
+    pass
+
 # --- Talent Instances ---
 
 tough_as_nails = Talent(
@@ -99,6 +103,12 @@ scholar = Talent(
     effect=scholar_effect
 )
 
+blood_mage = Talent(
+    name="Blood Mage",
+    description="May sacrifice HP for Mana in rituals.",
+    effect=blood_mage_effect
+)
+
 # A dictionary to easily access all talents
 all_talents = {
     "tough_as_nails": tough_as_nails,
@@ -109,4 +119,5 @@ all_talents = {
     "no_talent_for_magic": no_talent_for_magic,
     "alertness": alertness,
     "scholar": scholar,
+    "blood_mage": blood_mage,
 }
