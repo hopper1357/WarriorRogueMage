@@ -1,3 +1,5 @@
+from spells import all_spells
+
 class Item:
     def __init__(self, name, description):
         self.name = name
@@ -27,6 +29,15 @@ class Potion(Item):
 
     def use(self, character):
         self.effect(character)
+
+class MagicImplement(Item):
+    def __init__(self, name, description, level, thaumaturgy_bonus, stored_spells=None):
+        super().__init__(name, description)
+        self.level = level
+        self.thaumaturgy_bonus = thaumaturgy_bonus
+        self.stored_spells = stored_spells if stored_spells is not None else []
+        self.max_mana = 10 * self.level
+        self.mana_pool = self.max_mana
 
 # --- Item Instances ---
 
@@ -91,6 +102,14 @@ mana_potion = Potion(
     effect=restore_mana_effect
 )
 
+novices_wand = MagicImplement(
+    name="Novice's Wand",
+    description="A simple wand for a starting mage.",
+    level=1,
+    thaumaturgy_bonus=1,
+    stored_spells=[all_spells["magic_light"]]
+)
+
 # A dictionary to easily access all items
 all_items = {
     "unarmed_strike": unarmed_strike,
@@ -100,4 +119,5 @@ all_items = {
     "chain_mail": chain_mail,
     "health_potion": health_potion,
     "mana_potion": mana_potion,
+    "novices_wand": novices_wand,
 }

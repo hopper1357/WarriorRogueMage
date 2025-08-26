@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from character import Character
 from spell import Spell
 from talents import tough_as_nails, marksman, alertness, scholar
-from items import Weapon, Armor
+from items import Weapon, Armor, MagicImplement
 from unittest.mock import patch, MagicMock
 
 def test_character_initialization():
@@ -231,3 +231,60 @@ def test_damage_resistance():
 
     char.take_damage(4, "blunt")
     assert char.hp == 2 # No resistance
+
+@patch('dice.Die.roll')
+def test_magic_implement_bonus(mock_roll):
+    mock_roll.return_value = 5
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+
+    implement = MagicImplement("Test Wand", "A wand for testing", level=1, thaumaturgy_bonus=2)
+    char.inventory.append(implement)
+    char.equip(implement)
+
+    # Total = 5 (roll) + 3 (mage) + 2 (skill) + 2 (implement) = 12
+    success, total = char.attribute_check("mage", ["Thaumaturgy"], 12)
+    assert success
+    assert total == 12
+
+    char.unequip(implement)
+    # Total = 5 (roll) + 3 (mage) + 2 (skill) = 10
+    success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
+    assert success
+    assert total == 10
+
+@patch('dice.Die.roll')
+def test_cast_spell_from_implement(mock_roll):
+    mock_roll.return_value = 5 # Success roll
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=3, skills=["Thaumaturgy"])
+    char.mana = 20
+
+    mock_effect = MagicMock()
+    spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
+    char.spellbook.append(spell)
+
+    implement = MagicImplement("Test Wand", "A wand for testing", level=1, thaumaturgy_bonus=0, stored_spells=[spell])
+    implement.mana_pool = 10
+    char.inventory.append(implement)
+    char.equip(implement)
+
+    # Cast from implement
+    result = char.cast_spell(spell, use_implement=True)
+    assert result is True
+    assert char.mana == 20 # Character mana should not be used
+    assert implement.mana_pool == 5 # Implement mana should be used
+    mock_effect.assert_called_once_with(caster=char, target=None)
+
+    # Cast from implement again, should succeed
+    result = char.cast_spell(spell, use_implement=True)
+    assert result is True
+    assert implement.mana_pool == 0 # Implement mana should be used
+
+    # Try to cast from implement again, should fail
+    result = char.cast_spell(spell, use_implement=True)
+    assert result is False # Not enough mana
+    assert implement.mana_pool == 0 # Should not change
+
+    # Cast from self (not using implement flag)
+    result = char.cast_spell(spell, use_implement=False)
+    assert result is True
+    assert char.mana == 15 # Character mana should be used

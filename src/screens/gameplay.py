@@ -143,5 +143,8 @@ class GameplayScreen:
         draw_text(screen, "Equipped:", self.font, (255, 255, 255), 600, 510)
         weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
         armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
+        implement_name = self.player.equipped_implement.name if self.player.equipped_implement else "None"
         draw_text(screen, f"W: {weapon_name}", self.font, (255, 255, 255), 600, 550)
         draw_text(screen, f"A: {armor_name}", self.font, (255, 255, 255), 600, 580)
+        if self.player.equipped_implement:
+            draw_text(screen, f"I: {implement_name} ({self.player.equipped_implement.mana_pool}/{self.player.equipped_implement.max_mana})", self.font, (255, 255, 255), 400, 580)

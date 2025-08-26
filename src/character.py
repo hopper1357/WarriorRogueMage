@@ -2,7 +2,7 @@ import pygame
 from dice import Die
 from spell import Spell
 from talent import Talent
-from items import Weapon, Armor
+from items import Weapon, Armor, MagicImplement
 
 SKILLS = {
     "warrior": ["Axes", "Blunt", "Polearms", "Riding", "Swords", "Unarmed"],
@@ -31,6 +31,7 @@ class Character(pygame.sprite.Sprite):
         self.inventory = []
         self.equipped_weapon = None
         self.equipped_armor = None
+        self.equipped_implement = None
         self.d6 = Die()
         self.damage_resistances = {}
 
@@ -43,6 +44,7 @@ class Character(pygame.sprite.Sprite):
         self.ranged_attack_bonus = 0
         self.awareness_bonus = 0
         self.lore_bonus = 0
+        self.thaumaturgy_bonus = 0
 
         self.hp = 6 + self.attributes["warrior"]
         self.max_hp = self.hp
@@ -75,6 +77,12 @@ class Character(pygame.sprite.Sprite):
                 self.unequip(self.equipped_armor)
             self.equipped_armor = item
             print(f"{self.name} equipped {item.name}.")
+        elif isinstance(item, MagicImplement):
+            if self.equipped_implement:
+                self.unequip(self.equipped_implement)
+            self.equipped_implement = item
+            self.thaumaturgy_bonus += item.thaumaturgy_bonus
+            print(f"{self.name} equipped {item.name}.")
         else:
             print(f"{item.name} is not an equippable item.")
 
@@ -84,6 +92,10 @@ class Character(pygame.sprite.Sprite):
             print(f"{self.name} unequipped {item.name}.")
         elif item == self.equipped_armor:
             self.equipped_armor = None
+            print(f"{self.name} unequipped {item.name}.")
+        elif item == self.equipped_implement:
+            self.thaumaturgy_bonus -= item.thaumaturgy_bonus
+            self.equipped_implement = None
             print(f"{self.name} unequipped {item.name}.")
         else:
             print(f"{item.name} is not equipped.")
@@ -116,6 +128,8 @@ class Character(pygame.sprite.Sprite):
             total += self.awareness_bonus
         if "Lore" in relevant_skills:
             total += self.lore_bonus
+        if "Thaumaturgy" in relevant_skills:
+            total += self.thaumaturgy_bonus
 
         return total
 
@@ -149,8 +163,12 @@ class Character(pygame.sprite.Sprite):
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
-    def cast_spell(self, spell, target=None):
-        if spell not in self.spellbook:
+    def cast_spell(self, spell, target=None, use_implement=False):
+        # Check if the character knows the spell, either personally or through an implement
+        knows_spell = spell in self.spellbook
+        implement_knows_spell = self.equipped_implement and spell in self.equipped_implement.stored_spells
+
+        if not knows_spell:
             print(f"{self.name} does not know the spell {spell.name}.")
             return False
 
@@ -158,23 +176,35 @@ class Character(pygame.sprite.Sprite):
         if self.equipped_armor:
             mana_cost += self.equipped_armor.armor_penalty
 
-        if self.mana < mana_cost:
-            print(f"{self.name} does not have enough mana to cast {spell.name}.")
-            return False
+        # Determine which mana pool to use
+        source_name = self.name
+        if use_implement and implement_knows_spell:
+            source_name = self.equipped_implement.name
+            if self.equipped_implement.mana_pool < mana_cost:
+                print(f"{source_name} does not have enough mana.")
+                return False
+        else:
+            if self.mana < mana_cost:
+                print(f"{self.name} does not have enough mana.")
+                return False
 
         # Perform a Mage attribute check against the spell's DL
-        # The 'Thaumaturgy' skill is relevant for spell casting
         success, total = self.attribute_check("mage", ["Thaumaturgy"], spell.dl)
 
         if success:
-            print(f"{self.name} successfully casts {spell.name} (Total: {total}).")
-            self.mana -= mana_cost
+            print(f"{self.name} successfully casts {spell.name} from {source_name} (Total: {total}).")
+            if use_implement and implement_knows_spell:
+                self.equipped_implement.mana_pool -= mana_cost
+            else:
+                self.mana -= mana_cost
             spell.effect(caster=self, target=target)
             return True
         else:
-            print(f"{self.name} failed to cast {spell.name} (Total: {total}).")
-            # According to WR&M rules, mana is still consumed on a failed casting roll
-            self.mana -= mana_cost
+            print(f"{self.name} failed to cast {spell.name} from {source_name} (Total: {total}).")
+            if use_implement and implement_knows_spell:
+                self.equipped_implement.mana_pool -= mana_cost
+            else:
+                self.mana -= mana_cost
             return False
 
     @property

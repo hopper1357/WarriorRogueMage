@@ -115,6 +115,10 @@ class CharacterCreationScreen:
                 self.character.inventory.append(all_items["health_potion"])
                 self.character.equip(all_items["sword"])
 
+                if self.character.attributes["mage"] > 0:
+                    self.character.inventory.append(all_items["novices_wand"])
+                    self.character.equip(all_items["novices_wand"])
+
                 self.is_done = True
 
     def update(self):

@@ -1,6 +1,6 @@
 import pygame
 from ui import Button
-from items import Weapon, Armor, Potion
+from items import Weapon, Armor, Potion, MagicImplement
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -20,7 +20,7 @@ class InventoryScreen:
         buttons = {}
         # Create buttons for each item in the inventory
         for i, item in enumerate(self.player.inventory):
-            if isinstance(item, (Weapon, Armor)):
+            if isinstance(item, (Weapon, Armor, MagicImplement)):
                 buttons[f"equip_{i}"] = Button(500, 100 + i * 50, 100, 40, "Equip", (0, 200, 0), (255, 255, 255))
             elif isinstance(item, Potion):
                 buttons[f"use_{i}"] = Button(500, 100 + i * 50, 100, 40, "Use", (0, 100, 200), (255, 255, 255))
@@ -67,8 +67,13 @@ class InventoryScreen:
         draw_text(screen, "Equipped:", self.font, (255, 255, 255), 300, 50)
         weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
         armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
+        implement_name = self.player.equipped_implement.name if self.player.equipped_implement else "None"
         draw_text(screen, f"Weapon: {weapon_name}", self.font, (255, 255, 255), 300, 100)
         draw_text(screen, f"Armor: {armor_name}", self.font, (255, 255, 255), 300, 150)
+        draw_text(screen, f"Implement: {implement_name}", self.font, (255, 255, 255), 300, 200)
+        if self.player.equipped_implement:
+            draw_text(screen, f"  Mana: {self.player.equipped_implement.mana_pool}/{self.player.equipped_implement.max_mana}", self.font, (255, 255, 255), 300, 230)
+
 
         # Draw buttons
         for button in self.buttons.values():
