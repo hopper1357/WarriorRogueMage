@@ -2,6 +2,7 @@ import pygame
 from character import Character
 from entities import TownGuard, Goblin, GiantRat, Skeleton
 from save_manager import save_game
+from tilemap import Map, Camera
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -14,18 +15,21 @@ class GameplayScreen:
         self.player = player
         self.font = pygame.font.Font(None, 36)
 
+        self.map = Map("assets/maps/town.txt")
+        self.camera = Camera(self.map.width, self.map.height)
+
         self.all_sprites = pygame.sprite.Group()
         self.all_sprites.add(self.player)
 
         self.npcs = pygame.sprite.Group()
-        guard = TownGuard(x=100, y=100)
+        guard = TownGuard(x=10 * 32, y=5 * 32) # Place entities on the map grid
         self.all_sprites.add(guard)
         self.npcs.add(guard)
 
         self.monsters = pygame.sprite.Group()
-        goblin = Goblin(x=600, y=400)
-        rat = GiantRat(x=200, y=500)
-        skeleton = Skeleton(x=700, y=100)
+        goblin = Goblin(x=15 * 32, y=12 * 32)
+        rat = GiantRat(x=5 * 32, y=14 * 32)
+        skeleton = Skeleton(x=15 * 32, y=3 * 32)
         self.all_sprites.add(goblin, rat, skeleton)
         self.monsters.add(goblin, rat, skeleton)
 
@@ -38,35 +42,39 @@ class GameplayScreen:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1:
                 if len(self.player.spellbook) > 0:
-                    self.player.cast_spell(self.player.spellbook[0])
+                    self.player.cast_spell(self.player.spellbook[0], self.player) # Target self for now
             elif event.key == pygame.K_2:
                 if len(self.player.spellbook) > 1:
-                    self.player.cast_spell(self.player.spellbook[1])
+                    self.player.cast_spell(self.player.spellbook[1], self.player)
             elif event.key == pygame.K_i:
                 from main import GameState
                 return GameState.INVENTORY
             elif event.key == pygame.K_F5:
                 save_game(self.player)
-                self.save_message_timer = 120 # Show message for 120 frames (2 seconds)
+                self.save_message_timer = 120
         from main import GameState
         return GameState.GAMEPLAY
 
     def update(self, screen):
         # Player movement
+        vx, vy = 0, 0
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.player.rect.x -= self.player_speed
+            vx = -self.player_speed
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.player.rect.x += self.player_speed
+            vx = self.player_speed
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.player.rect.y -= self.player_speed
+            vy = -self.player_speed
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.player.rect.y += self.player_speed
+            vy = self.player_speed
 
-        # Keep player on screen
-        self.player.rect.clamp_ip(screen.get_rect())
+        self.player.rect.x += vx
+        self.check_collisions('x')
+        self.player.rect.y += vy
+        self.check_collisions('y')
 
-        # Update save message timer
+        self.camera.update(self.player)
+
         if self.save_message_timer > 0:
             self.save_message_timer -= 1
 
@@ -75,7 +83,7 @@ class GameplayScreen:
         for npc in self.npcs:
             if self.player.rect.colliderect(npc.rect.inflate(20, 20))):
                 self.dialogue_to_show = npc.dialogue
-                break # Show one dialogue at a time
+                break
 
         for monster in self.monsters:
             if self.player.rect.colliderect(monster.rect.inflate(20, 20))):
@@ -86,10 +94,30 @@ class GameplayScreen:
         from main import GameState
         return GameState.GAMEPLAY, None
 
-    def draw(self, screen):
-        screen.fill((25, 100, 25)) # A green background for the world
+    def check_collisions(self, direction):
+        if direction == 'x':
+            hits = pygame.sprite.spritecollide(self.player, self.map.walls, False)
+            if hits:
+                if self.player.rect.x > hits[0].rect.x: # Moving left
+                    self.player.rect.left = hits[0].rect.right
+                else: # Moving right
+                    self.player.rect.right = hits[0].rect.left
+        if direction == 'y':
+            hits = pygame.sprite.spritecollide(self.player, self.map.walls, False)
+            if hits:
+                if self.player.rect.y > hits[0].rect.y: # Moving up
+                    self.player.rect.top = hits[0].rect.bottom
+                else: # Moving down
+                    self.player.rect.bottom = hits[0].rect.top
 
-        self.all_sprites.draw(screen)
+    def draw(self, screen):
+        screen.fill((25, 100, 25))
+
+        for sprite in self.map.all_tiles:
+            screen.blit(sprite.image, self.camera.apply(sprite))
+
+        for sprite in self.all_sprites:
+            screen.blit(sprite.image, self.camera.apply(sprite))
 
         if self.dialogue_to_show:
             draw_text(screen, self.dialogue_to_show, self.font, (255, 255, 255), 100, 450)
@@ -97,11 +125,9 @@ class GameplayScreen:
         if self.save_message_timer > 0:
             draw_text(screen, "Game Saved!", self.font, (255, 255, 0), 350, 10)
 
-        # Draw HUD
         self._draw_hud(screen)
 
     def _draw_hud(self, screen):
-        # Simple HUD on the bottom of the screen
         hud_rect = pygame.Rect(0, 500, 800, 100)
         pygame.draw.rect(screen, (50, 50, 50), hud_rect)
 
@@ -110,12 +136,10 @@ class GameplayScreen:
         draw_text(screen, f"Fate: {self.player.fate}", self.font, (255, 255, 255), 200, 510)
         draw_text(screen, f"Defense: {self.player.total_defense}", self.font, (255, 255, 255), 200, 550)
 
-        # Display spells
         draw_text(screen, "Spells:", self.font, (255, 255, 255), 400, 510)
         for i, spell in enumerate(self.player.spellbook):
             draw_text(screen, f"({i+1}) {spell.name}", self.font, (255, 255, 255), 400, 550 + i * 40)
 
-        # Display equipped items
         draw_text(screen, "Equipped:", self.font, (255, 255, 255), 600, 510)
         weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
         armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"

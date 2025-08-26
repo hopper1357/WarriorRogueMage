@@ -97,7 +97,7 @@ class CharacterCreationScreen:
 
                 self.character = Character(
                     name="Player",
-                    x=400, y=300,
+                    x=10 * 32, y=8 * 32,
                     warrior=self.attributes["warrior"],
                     rogue=self.attributes["rogue"],
                     mage=self.attributes["mage"],
