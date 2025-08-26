@@ -1,6 +1,7 @@
 import pygame
 from character import Character
 from entities import TownGuard, Goblin
+from save_manager import save_game
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -29,6 +30,7 @@ class GameplayScreen:
         self.player_speed = 5
         self.dialogue_to_show = None
         self.active_monster = None
+        self.save_message_timer = 0
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -41,6 +43,9 @@ class GameplayScreen:
             elif event.key == pygame.K_i:
                 from main import GameState
                 return GameState.INVENTORY
+            elif event.key == pygame.K_F5:
+                save_game(self.player)
+                self.save_message_timer = 120 # Show message for 120 frames (2 seconds)
         from main import GameState
         return GameState.GAMEPLAY
 
@@ -58,6 +63,10 @@ class GameplayScreen:
 
         # Keep player on screen
         self.player.rect.clamp_ip(screen.get_rect())
+
+        # Update save message timer
+        if self.save_message_timer > 0:
+            self.save_message_timer -= 1
 
         # Interaction logic
         self.dialogue_to_show = None
@@ -82,6 +91,9 @@ class GameplayScreen:
 
         if self.dialogue_to_show:
             draw_text(screen, self.dialogue_to_show, self.font, (255, 255, 255), 100, 450)
+
+        if self.save_message_timer > 0:
+            draw_text(screen, "Game Saved!", self.font, (255, 255, 0), 350, 10)
 
         # Draw HUD
         self._draw_hud(screen)
