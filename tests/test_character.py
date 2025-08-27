@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from character import Character
 from spell import Spell
 from talents import tough_as_nails, marksman, alertness, scholar, blood_mage
-from items import Weapon, Armor, MagicImplement
+from items import Weapon, Armor, MagicImplement, all_items
 from ritual import Ritual
 from quest import Quest
 from unittest.mock import patch, MagicMock
@@ -273,6 +273,29 @@ def test_magic_implement_bonus(mock_roll):
     success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
     assert success
     assert total == 10
+
+def test_use_mana_potion():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=5) # max_mana = 10
+    mana_potion = all_items["mana_potion"]
+
+    # Case 1: Restore mana from 0
+    char.mana = 0
+    char.inventory.append(mana_potion)
+    assert mana_potion in char.inventory
+
+    char.use_item(mana_potion)
+
+    assert char.mana == 10
+    assert mana_potion not in char.inventory
+
+    # Case 2: Should not exceed max mana
+    char.mana = 5
+    char.inventory.append(mana_potion)
+
+    char.use_item(mana_potion)
+
+    assert char.mana == 10 # Not 15
+    assert mana_potion not in char.inventory
 
 def test_rest_mechanic():
     # Test case 1: Standard rest

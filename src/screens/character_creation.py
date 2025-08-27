@@ -113,6 +113,7 @@ class CharacterCreationScreen:
                 self.character.inventory.append(all_items["sword"])
                 self.character.inventory.append(all_items["leather_armor"])
                 self.character.inventory.append(all_items["health_potion"])
+                self.character.inventory.append(all_items["mana_potion"])
                 self.character.equip(all_items["sword"])
 
                 if self.character.attributes["mage"] > 0:

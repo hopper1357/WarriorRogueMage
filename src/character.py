@@ -2,7 +2,7 @@ import pygame
 from dice import Die
 from spell import Spell
 from talent import Talent
-from items import Weapon, Armor, MagicImplement
+from items import Weapon, Armor, MagicImplement, Potion
 from talents import all_talents
 import ritual
 import quest
@@ -105,6 +105,20 @@ class Character(pygame.sprite.Sprite):
         else:
             print(f"{item.name} is not equipped.")
 
+    def use_item(self, item):
+        if item not in self.inventory:
+            print(f"{self.name} does not have {item.name}.")
+            return
+
+        if hasattr(item, 'use'):
+            item.use(self)
+            # Consume the item if it's a potion
+            if isinstance(item, Potion):
+                self.inventory.remove(item)
+                print(f"{self.name} used {item.name}.")
+        else:
+            print(f"{item.name} is not a usable item.")
+
     @property
     def total_defense(self):
         bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
@@ -205,6 +219,11 @@ class Character(pygame.sprite.Sprite):
         self.hp += amount
         if self.hp > self.max_hp:
             self.hp = self.max_hp
+
+    def restore_mana(self, amount):
+        self.mana += amount
+        if self.mana > self.max_mana:
+            self.mana = self.max_mana
 
     def rest(self):
         """

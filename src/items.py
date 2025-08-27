@@ -54,9 +54,7 @@ def heal_effect(character):
     character.heal(10)
 
 def restore_mana_effect(character):
-    character.mana += 10
-    if character.mana > character.max_mana:
-        character.mana = character.max_mana
+    character.restore_mana(10)
 
 sword = Weapon(
     name="Sword",

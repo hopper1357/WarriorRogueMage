@@ -44,11 +44,12 @@ class InventoryScreen:
                     self.buttons = self._create_buttons()
                 elif name.startswith("use_"):
                     item_index = int(name.split("_")[1])
-                    item_to_use = self.player.inventory[item_index]
-                    item_to_use.use(self.player)
-                    self.player.inventory.pop(item_index)
-                    # Recreate buttons to reflect changes
-                    self.buttons = self._create_buttons()
+                    # Ensure the index is still valid after potential list modifications
+                    if item_index < len(self.player.inventory):
+                        item_to_use = self.player.inventory[item_index]
+                        self.player.use_item(item_to_use)
+                        # Recreate buttons to reflect the new inventory state
+                        self.buttons = self._create_buttons()
 
     def update(self):
         pass
