@@ -95,7 +95,7 @@ class GameplayScreen:
         # Interaction logic
         self.dialogue_to_show = None
         for npc in self.npcs:
-            if self.player.rect.colliderect(npc.rect.inflate(20, 20))):
+            if self.player.rect.colliderect(npc.rect.inflate(20, 20)):
                 self.dialogue_to_show = npc.dialogue
                 if npc.quest_to_give and self.player.get_quest(npc.quest_to_give.title) is None:
                     self.player.add_quest(npc.quest_to_give)
@@ -103,7 +103,7 @@ class GameplayScreen:
                 break
 
         for monster in self.monsters:
-            if self.player.rect.colliderect(monster.rect.inflate(20, 20))):
+            if self.player.rect.colliderect(monster.rect.inflate(20, 20)):
                 self.active_monster = monster
                 from main import GameState
                 return GameState.COMBAT, self.active_monster
