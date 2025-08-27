@@ -16,7 +16,7 @@ class GameplayScreen:
         self.player = player
         self.font = pygame.font.Font(None, 36)
 
-        self.map = Map("assets/maps/town.txt")
+        self.map = Map("town.txt")
         self.camera = Camera(self.map.width, self.map.height)
 
         self.all_sprites = pygame.sprite.Group()
