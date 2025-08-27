@@ -41,6 +41,9 @@ class GameplayScreen:
         self.save_message_timer = 0
         self.rest_message = ""
         self.rest_message_timer = 0
+        self.hazard_message = ""
+        self.hazard_message_timer = 0
+        self.hazard_cooldown = 0
 
         self.rest_button = Button(700, 10, 90, 40, "Rest", (0, 100, 0), (255, 255, 255))
 
@@ -110,6 +113,24 @@ class GameplayScreen:
         if self.rest_message_timer > 0:
             self.rest_message_timer -= 1
 
+        if self.hazard_message_timer > 0:
+            self.hazard_message_timer -= 1
+
+        if self.hazard_cooldown > 0:
+            self.hazard_cooldown -= 1
+
+        # Hazard collision logic
+        if self.hazard_cooldown == 0:
+            hits = pygame.sprite.spritecollide(self.player, self.map.hazards, False)
+            if hits:
+                hazard = hits[0]
+                hp_before = self.player.hp
+                self.player.take_damage(hazard.damage, hazard.damage_type)
+                damage_taken = hp_before - self.player.hp
+                self.hazard_message = f"Took {damage_taken} {hazard.damage_type} damage!"
+                self.hazard_message_timer = 120 # Show message for 2 seconds
+                self.hazard_cooldown = 60 # 1 second cooldown
+
         # Interaction logic
         self.dialogue_to_show = None
         for npc in self.npcs:
@@ -162,6 +183,9 @@ class GameplayScreen:
 
         if self.rest_message_timer > 0:
             draw_text(screen, self.rest_message, self.font, (173, 216, 230), 250, 50)
+
+        if self.hazard_message_timer > 0:
+            draw_text(screen, self.hazard_message, self.font, (255, 100, 100), 250, 80)
 
         self.rest_button.draw(screen)
         self._draw_hud(screen)

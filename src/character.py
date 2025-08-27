@@ -166,6 +166,30 @@ class Character(pygame.sprite.Sprite):
             return None, self_total, opponent_total # Tie
 
     def take_damage(self, damage, damage_type=None):
+        if isinstance(damage, str):
+            # Handle dice notation, e.g., "1d6", "2d6-1"
+            parts = damage.lower().split('d')
+            num_dice = int(parts[0])
+
+            modifier = 0
+            if '-' in parts[1]:
+                d_parts = parts[1].split('-')
+                dice_type = int(d_parts[0])
+                modifier = -int(d_parts[1])
+            elif '+' in parts[1]:
+                d_parts = parts[1].split('+')
+                dice_type = int(d_parts[0])
+                modifier = int(d_parts[1])
+            else:
+                dice_type = int(parts[1])
+
+            total_damage = 0
+            for _ in range(num_dice):
+                # Damage rolls always explode
+                total_damage += self.d6.exploding_roll()
+
+            damage = total_damage + modifier
+
         if damage_type and damage_type in self.damage_resistances:
             resistance = self.damage_resistances[damage_type]
             damage = int(damage * (1 - resistance))
@@ -174,6 +198,8 @@ class Character(pygame.sprite.Sprite):
         self.hp -= damage
         if self.hp < 0:
             self.hp = 0
+
+        print(f"{self.name} takes {damage} {damage_type or ''} damage.")
 
     def heal(self, amount):
         self.hp += amount
