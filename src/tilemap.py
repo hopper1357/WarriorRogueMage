@@ -1,4 +1,5 @@
 import pygame
+import os
 
 TILESIZE = 32
 
@@ -20,7 +21,10 @@ class Tile(pygame.sprite.Sprite):
 class Map:
     def __init__(self, filename):
         self.data = []
-        with open(filename, 'rt') as f:
+        game_folder = os.path.dirname(__file__)
+        map_folder = os.path.join(game_folder, '..', 'assets', 'maps')
+        self.map_path = os.path.join(map_folder, filename)
+        with open(self.map_path, 'rt') as f:
             for line in f:
                 self.data.append(line.strip())
 
