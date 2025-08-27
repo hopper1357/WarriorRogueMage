@@ -54,6 +54,25 @@ def test_attribute_check_success(mock_roll):
     assert success
     assert total == 11
 
+def test_seriously_wounded_status():
+    char = Character("Test", x=0, y=0, warrior=4, rogue=2, mage=1) # max_hp is 10
+    assert not char.is_seriously_wounded
+
+    char.hp = 6
+    assert not char.is_seriously_wounded
+
+    char.hp = 5
+    assert char.is_seriously_wounded
+
+    char.hp = 2
+    assert char.is_seriously_wounded
+
+    char.hp = 0
+    assert char.is_seriously_wounded
+
+    char.heal(6) # hp is 6
+    assert not char.is_seriously_wounded
+
 @patch('dice.Die.roll')
 def test_attribute_check_failure(mock_roll):
     mock_roll.return_value = 2
@@ -254,6 +273,25 @@ def test_magic_implement_bonus(mock_roll):
     success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
     assert success
     assert total == 10
+
+@patch('dice.Die.roll')
+def test_seriously_wounded_penalty(mock_roll):
+    mock_roll.return_value = 5
+    char = Character("Test", x=0, y=0, warrior=4, rogue=2, mage=1, skills=["Swords"])
+    char.hp = 5 # max_hp is 10, so this is exactly half
+    assert char.is_seriously_wounded
+
+    # Total = 5 (roll) + 4 (warrior) + 2 (skill) - 3 (penalty) = 8
+    success, total = char.attribute_check("warrior", ["Swords"], 10)
+    assert not success
+    assert total == 8
+
+    char.heal(1) # hp is now 6, not seriously wounded
+    assert not char.is_seriously_wounded
+    # Total = 5 (roll) + 4 (warrior) + 2 (skill) = 11
+    success, total = char.attribute_check("warrior", ["Swords"], 10)
+    assert success
+    assert total == 11
 
 def test_journal():
     char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)

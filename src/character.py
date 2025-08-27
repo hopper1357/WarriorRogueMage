@@ -110,6 +110,10 @@ class Character(pygame.sprite.Sprite):
         bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
         return self.defense + bonus
 
+    @property
+    def is_seriously_wounded(self):
+        return self.hp <= self.max_hp / 2
+
     def get_sustained_penalty(self):
         return -len(self.sustained_spells)
 
@@ -140,6 +144,9 @@ class Character(pygame.sprite.Sprite):
             total += self.thaumaturgy_bonus
 
         total += self.get_sustained_penalty()
+
+        if self.is_seriously_wounded:
+            total -= 3
 
         return total
 

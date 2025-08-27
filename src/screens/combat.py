@@ -165,9 +165,13 @@ class CombatScreen:
         # Draw combatants
         draw_text(screen, self.player.name, self.font, (255, 255, 255), 100, 100)
         draw_text(screen, f"HP: {self.player.hp}/{self.player.max_hp}", self.font, (255, 255, 255), 100, 150)
+        if self.player.is_seriously_wounded:
+            draw_text(screen, "Seriously Wounded!", self.font, (255, 100, 100), 100, 180)
 
         draw_text(screen, self.opponent.name, self.font, (255, 255, 255), 600, 100)
         draw_text(screen, f"HP: {self.opponent.hp}/{self.opponent.max_hp}", self.font, (255, 255, 255), 600, 150)
+        if self.opponent.is_seriously_wounded:
+            draw_text(screen, "Seriously Wounded!", self.font, (255, 100, 100), 600, 180)
 
         # Draw buttons
         if self.selection_state == "enhancement":
