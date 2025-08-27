@@ -73,7 +73,7 @@ class CharacterCreationScreen:
                 self.attributes[attr] -= 1
                 self.points += 1
         elif name.startswith("skill_"):
-            skill = name.split("_")[1]
+            skill = name.replace("skill_", "")
             if skill in self.selected_skills:
                 self.selected_skills.remove(skill)
             elif len(self.selected_skills) < 3:
@@ -85,7 +85,7 @@ class CharacterCreationScreen:
                 if skill_attr and self.attributes[skill_attr] > 0:
                     self.selected_skills.append(skill)
         elif name.startswith("race_"):
-            race_key = name.split("_")[1]
+            race_key = name.replace("race_", "")
             self.selected_race = all_races[race_key]
         elif name.startswith("talent_"):
             talent_key = name.replace("talent_", "")
@@ -125,19 +125,19 @@ class CharacterCreationScreen:
         # Update button colors based on state
         for name, button in self.buttons.items():
             if name.startswith("skill_"):
-                skill = name.split("_")[1]
+                skill = name.replace("skill_", "")
                 if skill in self.selected_skills:
                     button.color = (0, 200, 0)
                 else:
                     button.color = (100, 100, 100)
             elif name.startswith("race_"):
-                race_key = name.split("_")[1]
+                race_key = name.replace("race_", "")
                 if self.selected_race and self.selected_race["name"] == all_races[race_key]["name"]:
                     button.color = (0, 200, 0)
                 else:
                     button.color = (100, 100, 100)
             elif name.startswith("talent_"):
-                talent_key = name.split("_")[1]
+                talent_key = name.replace("talent_", "")
                 if self.selected_talent and self.selected_talent.name == all_talents[talent_key].name:
                     button.color = (0, 200, 0)
                 else:
