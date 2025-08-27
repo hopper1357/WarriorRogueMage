@@ -88,7 +88,7 @@ class CharacterCreationScreen:
             race_key = name.split("_")[1]
             self.selected_race = all_races[race_key]
         elif name.startswith("talent_"):
-            talent_key = name.split("_")[1]
+            talent_key = name.replace("talent_", "")
             self.selected_talent = all_talents[talent_key]
         elif name == "start":
             if self.points == 0 and len(self.selected_skills) == 3 and self.selected_race and self.selected_talent:
