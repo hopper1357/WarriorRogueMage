@@ -4,6 +4,7 @@ from entities import TownGuard, Goblin, GiantRat, Skeleton
 from save_manager import save_game
 from tilemap import Map, Camera
 from event_manager import event_manager
+from ui import Button
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -38,6 +39,10 @@ class GameplayScreen:
         self.dialogue_to_show = None
         self.active_monster = None
         self.save_message_timer = 0
+        self.rest_message = ""
+        self.rest_message_timer = 0
+
+        self.rest_button = Button(700, 10, 90, 40, "Rest", (0, 100, 0), (255, 255, 255))
 
         self._subscribe_quests()
 
@@ -67,6 +72,16 @@ class GameplayScreen:
                 if self.player.sustained_spells:
                     self.player.sustained_spells.clear()
                     print("You have dismissed all sustained spells.")
+
+        if self.rest_button.is_clicked(event):
+            hp_before = self.player.hp
+            mana_before = self.player.mana
+            self.player.rest()
+            hp_recovered = self.player.hp - hp_before
+            mana_recovered = self.player.mana - mana_before
+            self.rest_message = f"Rested. HP +{hp_recovered}, Mana +{mana_recovered}"
+            self.rest_message_timer = 120 # Show message for 2 seconds
+
         return None
 
     def update(self, screen):
@@ -91,6 +106,9 @@ class GameplayScreen:
 
         if self.save_message_timer > 0:
             self.save_message_timer -= 1
+
+        if self.rest_message_timer > 0:
+            self.rest_message_timer -= 1
 
         # Interaction logic
         self.dialogue_to_show = None
@@ -142,6 +160,10 @@ class GameplayScreen:
         if self.save_message_timer > 0:
             draw_text(screen, "Game Saved!", self.font, (255, 255, 0), 350, 10)
 
+        if self.rest_message_timer > 0:
+            draw_text(screen, self.rest_message, self.font, (173, 216, 230), 250, 50)
+
+        self.rest_button.draw(screen)
         self._draw_hud(screen)
 
     def _draw_hud(self, screen):

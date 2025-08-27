@@ -180,6 +180,21 @@ class Character(pygame.sprite.Sprite):
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
+    def rest(self):
+        """
+        Recovers HP and Mana after a day of rest.
+        Heals HP equal to the highest attribute.
+        Heals an additional 2 HP if the character has the Herbalism skill.
+        Fully restores Mana.
+        """
+        hp_to_recover = max(self.attributes.values())
+        if "Herbalism" in self.skills:
+            hp_to_recover += 2
+
+        self.heal(hp_to_recover)
+        self.mana = self.max_mana
+        print(f"{self.name} rests, recovering {hp_to_recover} HP and all Mana.")
+
     def cast_spell(self, spell, target=None, use_implement=False, enhancement_level=0):
         # Check if the character knows the spell
         if spell not in self.spellbook:

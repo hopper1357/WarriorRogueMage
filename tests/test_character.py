@@ -274,6 +274,32 @@ def test_magic_implement_bonus(mock_roll):
     assert success
     assert total == 10
 
+def test_rest_mechanic():
+    # Test case 1: Standard rest
+    char = Character("Test", x=0, y=0, warrior=4, rogue=3, mage=2) # max_hp=10, max_mana=4, highest_attr=4
+    char.hp = 1
+    char.mana = 0
+
+    char.rest()
+
+    assert char.hp == 5 # 1 + 4
+    assert char.mana == 4 # max_mana
+
+    # Test case 2: Rest with Herbalism skill
+    char_herbalist = Character("Herbalist", x=0, y=0, warrior=2, rogue=3, mage=5, skills=["Herbalism"]) # max_hp=8, max_mana=10, highest_attr=5
+    char_herbalist.hp = 1
+    char_herbalist.mana = 0
+
+    char_herbalist.rest()
+
+    assert char_herbalist.hp == 8 # 1 + 5 (mage) + 2 (herbalism)
+    assert char_herbalist.mana == 10 # max_mana
+
+    # Test case 3: Rest should not exceed max HP
+    char.hp = char.max_hp - 1 # hp is 9
+    char.rest()
+    assert char.hp == char.max_hp # Should be 10, not 13
+
 @patch('dice.Die.roll')
 def test_seriously_wounded_penalty(mock_roll):
     mock_roll.return_value = 5
