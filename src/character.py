@@ -225,6 +225,14 @@ class Character(pygame.sprite.Sprite):
         if self.mana > self.max_mana:
             self.mana = self.max_mana
 
+    def spend_fate(self, amount):
+        if self.fate >= amount:
+            self.fate -= amount
+            print(f"{self.name} spends {amount} Fate. Remaining: {self.fate}")
+            return True
+        print(f"{self.name} does not have enough Fate to spend.")
+        return False
+
     def rest(self):
         """
         Recovers HP and Mana after a day of rest.

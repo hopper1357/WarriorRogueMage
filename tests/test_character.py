@@ -274,6 +274,30 @@ def test_magic_implement_bonus(mock_roll):
     assert success
     assert total == 10
 
+def test_spend_fate():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=3, mage=1) # fate = 3
+
+    # Case 1: Spend fate successfully
+    assert char.fate == 3
+    result = char.spend_fate(1)
+    assert result is True
+    assert char.fate == 2
+
+    # Case 2: Spend more fate than available
+    result = char.spend_fate(3) # Only has 2 left
+    assert result is False
+    assert char.fate == 2 # Fate should not change
+
+    # Case 3: Spend remaining fate
+    result = char.spend_fate(2)
+    assert result is True
+    assert char.fate == 0
+
+    # Case 4: Spend fate when at zero
+    result = char.spend_fate(1)
+    assert result is False
+    assert char.fate == 0
+
 def test_use_mana_potion():
     char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=5) # max_mana = 10
     mana_potion = all_items["mana_potion"]

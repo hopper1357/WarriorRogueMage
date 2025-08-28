@@ -21,9 +21,10 @@ class CombatScreen:
         self.is_over = False
         self.winner = None
         self.leveled_up = False
-        self.selection_state = "main" # "main", "spell_selection", "enhancement"
+        self.selection_state = "main" # "main", "spell_selection", "enhancement", "fate_prompt"
         self.selected_spell = None
         self.enhancement_level = 0
+        self.pending_action = None # To store the action for a potential reroll
 
         self.buttons = self._create_main_buttons()
         self.turn, _ = self.combat.determine_initiative()
@@ -51,93 +52,117 @@ class CombatScreen:
         buttons["back"] = Button(650, 500, 100, 50, "Back", (200, 200, 0), (0, 0, 0))
         return buttons
 
-    def handle_event(self, event):
-        if self.turn == self.player:
-            if self.selection_state == "main":
-                if self.buttons["attack"].is_clicked(event):
-                    self._player_turn("attack")
-                elif self.buttons.get("spell") and self.buttons["spell"].is_clicked(event):
-                    self.selection_state = "spell_selection"
-                    self.buttons = self._create_spell_buttons()
-                elif self.buttons["dismiss"].is_clicked(event):
-                    if self.player.sustained_spells:
-                        self.player.sustained_spells.clear()
-                        self.combat_log.append("You dismissed all sustained spells.")
-            elif self.selection_state == "spell_selection":
-                if self.buttons["back"].is_clicked(event):
-                    self.selection_state = "main"
-                    self.buttons = self._create_main_buttons()
-                else:
-                    for spell in self.player.spellbook:
-                        if self.buttons.get(spell.name) and self.buttons[spell.name].is_clicked(event):
-                            self.selected_spell = spell
-                            self.enhancement_level = 0
-                            self.selection_state = "enhancement"
-                            self.buttons = self._create_enhancement_buttons()
-                            break
-            elif self.selection_state == "enhancement":
-                if self.buttons["inc"].is_clicked(event):
-                    self.enhancement_level += 1
-                elif self.buttons["dec"].is_clicked(event):
-                    if self.enhancement_level > 0:
-                        self.enhancement_level -= 1
-                elif self.buttons["cast"].is_clicked(event):
-                    self._player_turn_spell()
-                elif self.buttons["back"].is_clicked(event):
-                    self.selection_state = "spell_selection"
-                    self.buttons = self._create_spell_buttons()
+    def _create_fate_buttons(self):
+        buttons = {}
+        buttons["yes"] = Button(300, 300, 100, 50, "Yes", (0, 200, 0), (255, 255, 255))
+        buttons["no"] = Button(450, 300, 100, 50, "No", (200, 0, 0), (255, 255, 255))
+        return buttons
 
-    def _player_turn_spell(self):
+    def handle_event(self, event):
+        if self.is_over or self.turn != self.player:
+            return
+
+        if self.selection_state == "main":
+            if self.buttons["attack"].is_clicked(event):
+                self._player_turn("attack")
+            elif self.buttons.get("spell") and self.buttons["spell"].is_clicked(event):
+                self.selection_state = "spell_selection"
+                self.buttons = self._create_spell_buttons()
+            elif self.buttons["dismiss"].is_clicked(event):
+                if self.player.sustained_spells:
+                    self.player.sustained_spells.clear()
+                    self.combat_log.append("You dismissed all sustained spells.")
+        elif self.selection_state == "spell_selection":
+            if self.buttons["back"].is_clicked(event):
+                self.selection_state = "main"
+                self.buttons = self._create_main_buttons()
+            else:
+                for spell in self.player.spellbook:
+                    if self.buttons.get(spell.name) and self.buttons[spell.name].is_clicked(event):
+                        self.selected_spell = spell
+                        self.enhancement_level = 0
+                        self.selection_state = "enhancement"
+                        self.buttons = self._create_enhancement_buttons()
+                        break
+        elif self.selection_state == "enhancement":
+            if self.buttons["inc"].is_clicked(event):
+                self.enhancement_level += 1
+            elif self.buttons["dec"].is_clicked(event):
+                if self.enhancement_level > 0:
+                    self.enhancement_level -= 1
+            elif self.buttons["cast"].is_clicked(event):
+                self._player_turn("spell")
+            elif self.buttons["back"].is_clicked(event):
+                self.selection_state = "spell_selection"
+                self.buttons = self._create_spell_buttons()
+        elif self.selection_state == "fate_prompt":
+            if self.buttons["yes"].is_clicked(event):
+                if self.player.spend_fate(1):
+                    self.combat_log.append("You spend 1 Fate to reroll!")
+                    self._player_turn(self.pending_action, is_reroll=True)
+                else:
+                    self.combat_log.append("You don't have enough Fate!")
+                    self._end_player_turn()
+            elif self.buttons["no"].is_clicked(event):
+                self._end_player_turn()
+
+    def _execute_player_attack(self):
+        weapon = self.player.equipped_weapon or all_items["unarmed_strike"]
+        success, total, damage = self.combat.attack(self.player, self.opponent, weapon)
+        if success:
+            self.combat_log.append(f"You hit for {damage} damage with {weapon.name}!")
+        else:
+            self.combat_log.append(f"You missed with {weapon.name}!")
+        return success
+
+    def _execute_player_spell(self):
         success = self.player.cast_spell(self.selected_spell, self.opponent, enhancement_level=self.enhancement_level)
         if success:
             self.combat_log.append(f"You cast {self.selected_spell.name}!")
         else:
             self.combat_log.append(f"You failed to cast {self.selected_spell.name}!")
+        return success
 
-        if self.opponent.is_dead:
-            self.winner = self.player
-            self.is_over = True
-            xp_gain = self.opponent.xp_value
-            self.combat_log.append(f"You gained {xp_gain} XP!")
-            if self.player.add_xp(xp_gain):
-                self.leveled_up = True
-            loot = self.opponent.drop_loot()
-            if loot:
-                self.player.inventory.append(loot)
-                self.combat_log.append(f"You found a {loot.name}!")
-            event_manager.post({"type": "monster_killed", "name": self.opponent.name})
-
+    def _end_player_turn(self):
         self.selection_state = "main"
         self.buttons = self._create_main_buttons()
-        self.turn = self.opponent
-        self._monster_turn()
+        if not self.is_over:
+            self.turn = self.opponent
+            self._monster_turn()
 
-    def _player_turn(self, action):
-        if action == "attack":
-            weapon = self.player.equipped_weapon or all_items["unarmed_strike"]
-            success, total, damage = self.combat.attack(self.player, self.opponent, weapon)
-            if success:
-                self.combat_log.append(f"You hit for {damage} damage with {weapon.name}!")
-            else:
-                self.combat_log.append(f"You missed with {weapon.name}!")
-
+    def _check_opponent_death(self):
         if self.opponent.is_dead:
             self.winner = self.player
             self.is_over = True
-            # XP
             xp_gain = self.opponent.xp_value
             self.combat_log.append(f"You gained {xp_gain} XP!")
             if self.player.add_xp(xp_gain):
                 self.leveled_up = True
-            # Loot
             loot = self.opponent.drop_loot()
             if loot:
                 self.player.inventory.append(loot)
                 self.combat_log.append(f"You found a {loot.name}!")
             event_manager.post({"type": "monster_killed", "name": self.opponent.name})
+            return True
+        return False
 
-        self.turn = self.opponent
-        self._monster_turn()
+    def _player_turn(self, action, is_reroll=False):
+        success = False
+        if action == "attack":
+            success = self._execute_player_attack()
+        elif action == "spell":
+            success = self._execute_player_spell()
+
+        if not success and self.player.fate > 0 and not is_reroll:
+            self.pending_action = action
+            self.selection_state = "fate_prompt"
+            self.buttons = self._create_fate_buttons()
+            return
+
+        if self._check_opponent_death():
+            return
+
+        self._end_player_turn()
 
     def _monster_turn(self):
         if self.is_over: return
@@ -181,6 +206,9 @@ class CombatScreen:
             mana_cost = self.selected_spell.mana_cost + self.enhancement_level * (self.selected_spell.mana_cost // 2)
             dl = self.selected_spell.dl + self.enhancement_level
             draw_text(screen, f"Cost: {mana_cost} Mana, DL: {dl}", self.font, (255, 255, 255), 300, 300)
+        elif self.selection_state == "fate_prompt":
+            draw_text(screen, "Action failed!", self.font, (255, 255, 0), 300, 200)
+            draw_text(screen, f"Spend 1 Fate to reroll? (Fate: {self.player.fate})", self.font, (255, 255, 255), 300, 250)
 
         for button in self.buttons.values():
             button.draw(screen)
