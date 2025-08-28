@@ -78,3 +78,42 @@ class Skeleton(Monster):
             loot_table=loot_table
         )
         self.damage_resistances = {"slashing": 0.5, "piercing": 0.5}
+
+class Bandit(Monster):
+    def __init__(self, x, y):
+        loot_table = [all_items["health_potion"], all_items["sword"]]
+        super().__init__(
+            name="Bandit",
+            x=x, y=y,
+            warrior=3,
+            rogue=2,
+            mage=0,
+            skills=["Swords", "Daggers"],
+            color=(128, 0, 0), # Maroon
+            xp_value=100,
+            loot_table=loot_table
+        )
+        # Equip the bandit
+        sword = all_items["sword"]
+        leather_armor = all_items["leather_armor"]
+        self.inventory.append(sword)
+        self.inventory.append(leather_armor)
+        self.equip(sword)
+        self.equip(leather_armor)
+
+class GiantSpider(Monster):
+    def __init__(self, x, y):
+        super().__init__(
+            name="Giant Spider",
+            x=x, y=y,
+            warrior=3,
+            rogue=4,
+            mage=0,
+            skills=["Unarmed"],
+            color=(50, 50, 50), # Dark Gray
+            xp_value=150,
+            loot_table=[] # Spiders might not drop items
+        )
+        bite = all_items["spider_bite"]
+        self.inventory.append(bite)
+        self.equip(bite)

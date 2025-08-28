@@ -1,6 +1,6 @@
 import pygame
 from character import Character
-from entities import TownGuard, Goblin, GiantRat, Skeleton
+from entities import TownGuard, Goblin, GiantRat, Skeleton, Bandit, GiantSpider
 from save_manager import save_game
 from tilemap import Map, Camera
 from event_manager import event_manager
@@ -32,8 +32,10 @@ class GameplayScreen:
         goblin = Goblin(x=15 * 32, y=12 * 32)
         rat = GiantRat(x=5 * 32, y=14 * 32)
         skeleton = Skeleton(x=15 * 32, y=3 * 32)
-        self.all_sprites.add(goblin, rat, skeleton)
-        self.monsters.add(goblin, rat, skeleton)
+        bandit = Bandit(x=3 * 32, y=3 * 32)
+        spider = GiantSpider(x=17 * 32, y=8 * 32)
+        self.all_sprites.add(goblin, rat, skeleton, bandit, spider)
+        self.monsters.add(goblin, rat, skeleton, bandit, spider)
 
         self.player_speed = 5
         self.dialogue_to_show = None

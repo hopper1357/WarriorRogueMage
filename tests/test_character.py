@@ -6,6 +6,7 @@ from character import Character
 from spell import Spell
 from talents import tough_as_nails, marksman, alertness, scholar, blood_mage
 from items import Weapon, Armor, MagicImplement, all_items
+from effects import Poisoned
 from ritual import Ritual
 from quest import Quest
 from unittest.mock import patch, MagicMock
@@ -273,6 +274,32 @@ def test_magic_implement_bonus(mock_roll):
     success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
     assert success
     assert total == 10
+
+def test_poisoned_status_effect():
+    char = Character("Test", x=0, y=0, warrior=5, rogue=1, mage=1) # max_hp=11
+    initial_hp = char.hp
+
+    poison_effect = Poisoned(duration=3, damage=2)
+    char.add_status_effect(poison_effect)
+
+    assert len(char.status_effects) == 1
+    assert char.get_status_effect("Poisoned") is not None
+
+    # Simulate turn 1
+    poison_effect.on_turn_start()
+    assert char.hp == initial_hp - 2
+
+    # Simulate turn 2
+    poison_effect.on_turn_start()
+    assert char.hp == initial_hp - 4
+
+    # Simulate turn 3
+    poison_effect.on_turn_start()
+    assert char.hp == initial_hp - 6
+
+    # After duration, the effect should be removed by the combat loop,
+    # but we can test the state here.
+    assert poison_effect.duration == 3 # Duration doesn't change on the effect itself
 
 def test_spend_fate():
     char = Character("Test", x=0, y=0, warrior=1, rogue=3, mage=1) # fate = 3

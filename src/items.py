@@ -119,3 +119,13 @@ all_items = {
     "mana_potion": mana_potion,
     "novices_wand": novices_wand,
 }
+
+spider_bite = Weapon(
+    name="Spider Bite",
+    description="A venomous bite.",
+    damage="1d6-1",
+    skill="Unarmed",
+    weapon_type="melee",
+    damage_type="piercing"
+)
+all_items["spider_bite"] = spider_bite

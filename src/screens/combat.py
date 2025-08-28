@@ -147,6 +147,10 @@ class CombatScreen:
         return False
 
     def _player_turn(self, action, is_reroll=False):
+        if not is_reroll:
+            self._process_status_effects(self.player)
+            if self.is_over: return # Effects might end the combat
+
         success = False
         if action == "attack":
             success = self._execute_player_attack()
@@ -164,8 +168,22 @@ class CombatScreen:
 
         self._end_player_turn()
 
+    def _process_status_effects(self, character):
+        if self.is_over: return
+
+        # Use a copy to allow modification during iteration
+        for effect in list(character.status_effects):
+            effect.on_turn_start()
+            effect.duration -= 1
+            if effect.duration <= 0:
+                effect.on_remove()
+                character.status_effects.remove(effect)
+                self.combat_log.append(f"{effect.name} has worn off for {character.name}.")
+
     def _monster_turn(self):
         if self.is_over: return
+        self._process_status_effects(self.opponent)
+        if self.is_over: return # Effects might end the combat
 
         weapon = self.opponent.equipped_weapon or all_items["unarmed_strike"]
         success, total, damage = self.combat.attack(self.opponent, self.player, weapon)
@@ -190,13 +208,23 @@ class CombatScreen:
         # Draw combatants
         draw_text(screen, self.player.name, self.font, (255, 255, 255), 100, 100)
         draw_text(screen, f"HP: {self.player.hp}/{self.player.max_hp}", self.font, (255, 255, 255), 100, 150)
+        y_offset = 180
         if self.player.is_seriously_wounded:
-            draw_text(screen, "Seriously Wounded!", self.font, (255, 100, 100), 100, 180)
+            draw_text(screen, "Seriously Wounded!", self.font, (255, 100, 100), 100, y_offset)
+            y_offset += 30
+        for effect in self.player.status_effects:
+            draw_text(screen, str(effect), self.font, (150, 255, 150), 100, y_offset)
+            y_offset += 30
 
         draw_text(screen, self.opponent.name, self.font, (255, 255, 255), 600, 100)
         draw_text(screen, f"HP: {self.opponent.hp}/{self.opponent.max_hp}", self.font, (255, 255, 255), 600, 150)
+        y_offset = 180
         if self.opponent.is_seriously_wounded:
-            draw_text(screen, "Seriously Wounded!", self.font, (255, 100, 100), 600, 180)
+            draw_text(screen, "Seriously Wounded!", self.font, (255, 100, 100), 600, y_offset)
+            y_offset += 30
+        for effect in self.opponent.status_effects:
+            draw_text(screen, str(effect), self.font, (150, 255, 150), 600, y_offset)
+            y_offset += 30
 
         # Draw buttons
         if self.selection_state == "enhancement":

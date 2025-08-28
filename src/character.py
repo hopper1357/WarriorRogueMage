@@ -32,6 +32,7 @@ class Character(pygame.sprite.Sprite):
         self.talents = talents if talents is not None else []
         self.spellbook = []
         self.sustained_spells = []
+        self.status_effects = []
         self.inventory = []
         self.journal = []
         self.equipped_weapon = None
@@ -131,6 +132,19 @@ class Character(pygame.sprite.Sprite):
     def get_sustained_penalty(self):
         return -len(self.sustained_spells)
 
+    def add_status_effect(self, effect):
+        # Prevent duplicate effects of the same name
+        if not self.get_status_effect(effect.name):
+            self.status_effects.append(effect)
+            effect.on_apply(self)
+            print(f"{self.name} is now {effect.name}.")
+
+    def get_status_effect(self, effect_name):
+        for effect in self.status_effects:
+            if effect.name == effect_name:
+                return effect
+        return None
+
     def _get_attribute_check_total(self, attribute, relevant_skills):
         if attribute not in self.attributes:
             raise ValueError(f"Invalid attribute: {attribute}")
@@ -209,11 +223,14 @@ class Character(pygame.sprite.Sprite):
             damage = int(damage * (1 - resistance))
             print(f"{self.name} resists {damage_type} damage!")
 
-        self.hp -= damage
+        final_damage = damage
+
+        self.hp -= final_damage
         if self.hp < 0:
             self.hp = 0
 
-        print(f"{self.name} takes {damage} {damage_type or ''} damage.")
+        print(f"{self.name} takes {final_damage} {damage_type or ''} damage.")
+        return final_damage
 
     def heal(self, amount):
         self.hp += amount
