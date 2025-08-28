@@ -1,38 +1,41 @@
 from spells import all_spells
 
 class Item:
-    def __init__(self, name, description):
+    def __init__(self, name, description, properties=None):
         self.name = name
         self.description = description
+        self.properties = properties if properties is not None else {}
 
     def __str__(self):
         return self.name
 
 class Weapon(Item):
-    def __init__(self, name, description, damage, skill, weapon_type, damage_type="blunt"):
-        super().__init__(name, description)
+    def __init__(self, name, description, damage, skill, weapon_type, damage_type="blunt", two_handed=False, properties=None):
+        super().__init__(name, description, properties)
         self.damage = damage
         self.skill = skill
         self.type = weapon_type
         self.damage_type = damage_type
+        self.two_handed = two_handed
 
 class Armor(Item):
-    def __init__(self, name, description, defense_bonus, armor_penalty):
-        super().__init__(name, description)
+    def __init__(self, name, description, defense_bonus, armor_penalty, is_shield=False, properties=None):
+        super().__init__(name, description, properties)
         self.defense_bonus = defense_bonus
         self.armor_penalty = armor_penalty
+        self.is_shield = is_shield
 
 class Potion(Item):
-    def __init__(self, name, description, effect):
-        super().__init__(name, description)
+    def __init__(self, name, description, effect, properties=None):
+        super().__init__(name, description, properties)
         self.effect = effect
 
     def use(self, character):
         self.effect(character)
 
 class MagicImplement(Item):
-    def __init__(self, name, description, level, thaumaturgy_bonus, stored_spells=None):
-        super().__init__(name, description)
+    def __init__(self, name, description, level, thaumaturgy_bonus, stored_spells=None, properties=None):
+        super().__init__(name, description, properties)
         self.level = level
         self.thaumaturgy_bonus = thaumaturgy_bonus
         self.stored_spells = stored_spells if stored_spells is not None else []
@@ -120,6 +123,26 @@ all_items = {
     "novices_wand": novices_wand,
 }
 
+two_handed_sword = Weapon(
+    name="Two-Handed Sword",
+    description="A large sword that requires two hands to wield.",
+    damage="1d6+2",
+    skill="Swords",
+    weapon_type="melee",
+    damage_type="slashing",
+    two_handed=True
+)
+all_items["two_handed_sword"] = two_handed_sword
+
+shield = Armor(
+    name="Shield",
+    description="A simple wooden shield.",
+    defense_bonus=1,
+    armor_penalty=1,
+    is_shield=True
+)
+all_items["shield"] = shield
+
 spider_bite = Weapon(
     name="Spider Bite",
     description="A venomous bite.",
@@ -129,3 +152,22 @@ spider_bite = Weapon(
     damage_type="piercing"
 )
 all_items["spider_bite"] = spider_bite
+
+rune_blade = Weapon(
+    name="Rune Blade",
+    description="A magical blade that ignores enemy armor.",
+    damage="1d6+1",
+    skill="Swords",
+    weapon_type="melee",
+    damage_type="slashing",
+    properties={"ignores_armor": True}
+)
+all_items["rune_blade"] = rune_blade
+
+plate_armor = Armor(
+    name="Plate Armor",
+    description="A full suit of plate armor.",
+    defense_bonus=4,
+    armor_penalty=3
+)
+all_items["plate_armor"] = plate_armor

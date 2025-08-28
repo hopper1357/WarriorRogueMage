@@ -35,7 +35,11 @@ class Combat:
             attack_bonus = 0 # No melee bonus for now
 
         # The DL for the attack is the defender's total defense
-        dl = defender.total_defense
+        if weapon.properties.get("ignores_armor"):
+            dl = defender.defense # Use base defense, ignoring armor
+        else:
+            dl = defender.total_defense
+
         _, total = attacker.attribute_check(attack_attribute, [attack_skill], dl)
         total += attack_bonus
         success = total >= dl

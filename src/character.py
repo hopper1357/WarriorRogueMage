@@ -36,7 +36,8 @@ class Character(pygame.sprite.Sprite):
         self.inventory = []
         self.journal = []
         self.equipped_weapon = None
-        self.equipped_armor = None
+        self.equipped_body_armor = None
+        self.equipped_shield = None
         self.equipped_implement = None
         self.d6 = Die()
         self.damage_resistances = {}
@@ -79,9 +80,14 @@ class Character(pygame.sprite.Sprite):
             self.equipped_weapon = item
             print(f"{self.name} equipped {item.name}.")
         elif isinstance(item, Armor):
-            if self.equipped_armor:
-                self.unequip(self.equipped_armor)
-            self.equipped_armor = item
+            if item.is_shield:
+                if self.equipped_shield:
+                    self.unequip(self.equipped_shield)
+                self.equipped_shield = item
+            else:
+                if self.equipped_body_armor:
+                    self.unequip(self.equipped_body_armor)
+                self.equipped_body_armor = item
             print(f"{self.name} equipped {item.name}.")
         elif isinstance(item, MagicImplement):
             if self.equipped_implement:
@@ -96,8 +102,11 @@ class Character(pygame.sprite.Sprite):
         if item == self.equipped_weapon:
             self.equipped_weapon = None
             print(f"{self.name} unequipped {item.name}.")
-        elif item == self.equipped_armor:
-            self.equipped_armor = None
+        elif item == self.equipped_body_armor:
+            self.equipped_body_armor = None
+            print(f"{self.name} unequipped {item.name}.")
+        elif item == self.equipped_shield:
+            self.equipped_shield = None
             print(f"{self.name} unequipped {item.name}.")
         elif item == self.equipped_implement:
             self.thaumaturgy_bonus -= item.thaumaturgy_bonus
@@ -122,7 +131,15 @@ class Character(pygame.sprite.Sprite):
 
     @property
     def total_defense(self):
-        bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
+        bonus = 0
+        if self.equipped_body_armor:
+            bonus += self.equipped_body_armor.defense_bonus
+
+        # Can't get shield bonus if using a two-handed weapon
+        if self.equipped_shield:
+            if not (self.equipped_weapon and self.equipped_weapon.two_handed):
+                bonus += self.equipped_shield.defense_bonus
+
         return self.defense + bonus
 
     @property
@@ -273,8 +290,10 @@ class Character(pygame.sprite.Sprite):
 
         # Calculate final mana cost and DL
         mana_cost = spell.mana_cost
-        if self.equipped_armor:
-            mana_cost += self.equipped_armor.armor_penalty
+        if self.equipped_body_armor:
+            mana_cost += self.equipped_body_armor.armor_penalty
+        if self.equipped_shield:
+            mana_cost += self.equipped_shield.armor_penalty
 
         enhancement_cost = enhancement_level * (spell.mana_cost // 2)
         mana_cost += enhancement_cost

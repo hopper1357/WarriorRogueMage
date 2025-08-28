@@ -186,18 +186,52 @@ def test_character_with_talents():
 
 def test_equipment():
     char = Character("Test", x=0, y=0, warrior=3, rogue=2, mage=3)
-    assert char.total_defense == 6 # (3+2)//2 + 4 = 6
+    base_defense = char.defense # (3+2)//2+4 = 6
+    assert char.total_defense == base_defense
 
-    leather_armor = Armor("Leather Armor", "Some leather armor", defense_bonus=1, armor_penalty=1)
+    leather_armor = all_items["leather_armor"]
+    shield = all_items["shield"]
+
     char.inventory.append(leather_armor)
     char.equip(leather_armor)
+    assert char.equipped_body_armor == leather_armor
+    assert char.total_defense == base_defense + leather_armor.defense_bonus # 6 + 1 = 7
 
-    assert char.equipped_armor == leather_armor
-    assert char.total_defense == 7 # 6 + 1
+    char.inventory.append(shield)
+    char.equip(shield)
+    assert char.equipped_shield == shield
+    assert char.total_defense == base_defense + leather_armor.defense_bonus + shield.defense_bonus # 7 + 1 = 8
 
     char.unequip(leather_armor)
-    assert char.equipped_armor is None
-    assert char.total_defense == 6
+    assert char.equipped_body_armor is None
+    assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
+
+    char.unequip(shield)
+    assert char.equipped_shield is None
+    assert char.total_defense == base_defense # 6
+
+def test_two_handed_weapon_negates_shield():
+    char = Character("Test", x=0, y=0, warrior=3, rogue=2, mage=3)
+    base_defense = char.defense
+
+    shield = all_items["shield"]
+    two_handed_sword = all_items["two_handed_sword"]
+
+    # Equip shield, defense should go up
+    char.inventory.append(shield)
+    char.equip(shield)
+    assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
+
+    # Equip two-handed sword, shield bonus should be negated
+    char.inventory.append(two_handed_sword)
+    char.equip(two_handed_sword)
+    assert char.equipped_weapon == two_handed_sword
+    assert char.total_defense == base_defense # Shield bonus is ignored
+
+    # Unequip two-handed sword, shield bonus should return
+    char.unequip(two_handed_sword)
+    assert char.equipped_weapon is None
+    assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
 
 @patch('dice.Die.roll')
 def test_cast_spell_with_armor_penalty(mock_roll):
@@ -209,14 +243,17 @@ def test_cast_spell_with_armor_penalty(mock_roll):
     spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
     char.spellbook.append(spell)
 
-    leather_armor = Armor("Leather Armor", "Some leather armor", defense_bonus=1, armor_penalty=1)
-    char.inventory.append(leather_armor)
+    leather_armor = all_items["leather_armor"]
+    shield = all_items["shield"]
+    char.inventory.extend([leather_armor, shield])
     char.equip(leather_armor)
+    char.equip(shield)
 
+    # Spell cost is 5. Leather armor penalty is 1. Shield penalty is 1. Total cost = 7.
     result = char.cast_spell(spell)
 
     assert result is True
-    assert char.mana == 4 # 10 - (5 + 1)
+    assert char.mana == 3 # 10 - 7
     mock_effect.assert_called_once_with(caster=char, target=None, enhancement_level=0)
 
 def test_add_xp_and_level_up():

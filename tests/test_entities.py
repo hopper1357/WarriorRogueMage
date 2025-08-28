@@ -22,8 +22,8 @@ def test_bandit_initialization():
     # Check for equipped items
     assert bandit.equipped_weapon is not None
     assert bandit.equipped_weapon.name == "Sword"
-    assert bandit.equipped_armor is not None
-    assert bandit.equipped_armor.name == "Leather Armor"
+    assert bandit.equipped_body_armor is not None
+    assert bandit.equipped_body_armor.name == "Leather Armor"
 
     # Check that the items are also in the main inventory list
     assert all_items["sword"] in bandit.inventory

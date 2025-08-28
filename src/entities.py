@@ -81,7 +81,12 @@ class Skeleton(Monster):
 
 class Bandit(Monster):
     def __init__(self, x, y):
-        loot_table = [all_items["health_potion"], all_items["sword"]]
+        loot_table = [
+            all_items["health_potion"],
+            all_items["sword"],
+            all_items["two_handed_sword"],
+            all_items["rune_blade"]
+        ]
         super().__init__(
             name="Bandit",
             x=x, y=y,
