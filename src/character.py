@@ -4,6 +4,7 @@ from spell import Spell
 from talent import Talent
 from items import Weapon, Armor, MagicImplement, Potion
 from talents import all_talents
+from event_manager import event_manager
 import ritual
 import quest
 
@@ -128,6 +129,22 @@ class Character(pygame.sprite.Sprite):
                 print(f"{self.name} used {item.name}.")
         else:
             print(f"{item.name} is not a usable item.")
+
+    def add_item_to_inventory(self, item):
+        self.inventory.append(item)
+        event_manager.post({"type": "inventory_updated", "item": item, "character": self})
+        print(f"{self.name} received {item.name}.")
+
+    def has_item(self, item_name):
+        return any(item.name == item_name for item in self.inventory)
+
+    def remove_item_from_inventory(self, item_name):
+        for item in self.inventory:
+            if item.name == item_name:
+                self.inventory.remove(item)
+                print(f"{self.name} lost {item.name}.")
+                return True
+        return False
 
     @property
     def total_defense(self):

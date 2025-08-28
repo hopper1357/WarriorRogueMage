@@ -171,3 +171,9 @@ plate_armor = Armor(
     armor_penalty=3
 )
 all_items["plate_armor"] = plate_armor
+
+stolen_heirloom = Item(
+    name="Stolen Heirloom",
+    description="A family heirloom, stolen by bandits."
+)
+all_items["stolen_heirloom"] = stolen_heirloom

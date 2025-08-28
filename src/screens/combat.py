@@ -155,7 +155,7 @@ class CombatScreen:
                 self.leveled_up = True
             loot = self.opponent.drop_loot()
             if loot:
-                self.player.inventory.append(loot)
+                self.player.add_item_to_inventory(loot)
                 self.combat_log.append(f"You found a {loot.name}!")
             event_manager.post({"type": "monster_killed", "name": self.opponent.name})
             return True

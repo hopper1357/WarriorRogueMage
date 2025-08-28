@@ -41,3 +41,13 @@ class Quest:
         if self.is_complete:
             self.reward_func(player)
             print(f"Quest '{self.title}' complete! Reward received.")
+
+class CollectObjective(Objective):
+    def __init__(self, description, target_item):
+        super().__init__(description)
+        self.target_item = target_item
+
+    def update(self, event):
+        if event["type"] == "inventory_updated" and event["item"].name == self.target_item.name:
+            self.is_complete = True
+            print(f"Objective complete: {self.description}")

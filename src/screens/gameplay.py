@@ -1,6 +1,6 @@
 import pygame
 from character import Character
-from entities import TownGuard, Goblin, GiantRat, Skeleton, Bandit, GiantSpider
+from entities import TownGuard, Goblin, GiantRat, Skeleton, Bandit, GiantSpider, BanditLeader
 from save_manager import save_game
 from tilemap import Map, Camera
 from event_manager import event_manager
@@ -34,8 +34,9 @@ class GameplayScreen:
         skeleton = Skeleton(x=15 * 32, y=3 * 32)
         bandit = Bandit(x=3 * 32, y=3 * 32)
         spider = GiantSpider(x=17 * 32, y=8 * 32)
-        self.all_sprites.add(goblin, rat, skeleton, bandit, spider)
-        self.monsters.add(goblin, rat, skeleton, bandit, spider)
+        bandit_leader = BanditLeader(x=18 * 32, y=2 * 32)
+        self.all_sprites.add(goblin, rat, skeleton, bandit, spider, bandit_leader)
+        self.monsters.add(goblin, rat, skeleton, bandit, spider, bandit_leader)
 
         self.player_speed = 5
         self.dialogue_to_show = None
@@ -137,10 +138,7 @@ class GameplayScreen:
         self.dialogue_to_show = None
         for npc in self.npcs:
             if self.player.rect.colliderect(npc.rect.inflate(20, 20)):
-                self.dialogue_to_show = npc.dialogue
-                if npc.quest_to_give and self.player.get_quest(npc.quest_to_give.title) is None:
-                    self.player.add_quest(npc.quest_to_give)
-                    self._subscribe_quests() # Resubscribe to include the new quest
+                self.dialogue_to_show = npc.interact(self.player)
                 break
 
         for monster in self.monsters:
@@ -207,10 +205,12 @@ class GameplayScreen:
 
         draw_text(screen, "Equipped:", self.font, (255, 255, 255), 600, 510)
         weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
-        armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
+        body_armor_name = self.player.equipped_body_armor.name if self.player.equipped_body_armor else "None"
+        shield_name = self.player.equipped_shield.name if self.player.equipped_shield else "None"
         implement_name = self.player.equipped_implement.name if self.player.equipped_implement else "None"
         draw_text(screen, f"W: {weapon_name}", self.font, (255, 255, 255), 600, 550)
-        draw_text(screen, f"A: {armor_name}", self.font, (255, 255, 255), 600, 580)
+        draw_text(screen, f"B: {body_armor_name}", self.font, (255, 255, 255), 600, 580)
+        draw_text(screen, f"S: {shield_name}", self.font, (255, 255, 255), 600, 610)
         if self.player.equipped_implement:
             draw_text(screen, f"I: {implement_name} ({self.player.equipped_implement.mana_pool}/{self.player.equipped_implement.max_mana})", self.font, (255, 255, 255), 400, 580)
 

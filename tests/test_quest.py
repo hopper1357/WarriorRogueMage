@@ -2,7 +2,9 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from quest import Quest, KillObjective
+from quest import Quest, KillObjective, CollectObjective
+from items import all_items
+from character import Character
 from event_manager import event_manager
 
 def test_kill_objective_update():
@@ -42,3 +44,19 @@ def test_quest_completion():
     # Test reward
     quest.give_reward(None) # player object is not needed for this test
     assert reward_called is True
+
+def test_collect_objective_update():
+    heirloom = all_items["stolen_heirloom"]
+    objective = CollectObjective("Collect the heirloom", heirloom)
+
+    player = Character("Test Player", 0, 0, 1, 1, 1)
+
+    event_manager.subscribe("inventory_updated", objective.update)
+
+    # Post an irrelevant event
+    player.add_item_to_inventory(all_items["sword"])
+    assert not objective.is_complete
+
+    # Post the relevant event
+    player.add_item_to_inventory(heirloom)
+    assert objective.is_complete
