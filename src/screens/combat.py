@@ -21,7 +21,7 @@ class CombatScreen:
         self.is_over = False
         self.winner = None
         self.leveled_up = False
-        self.selection_state = "main" # "main", "spell_selection", "enhancement", "fate_prompt"
+        self.selection_state = "main" # "main", "spell_selection", "enhancement", "fate_prompt", "death_fate_prompt"
         self.selected_spell = None
         self.enhancement_level = 0
         self.pending_action = None # To store the action for a potential reroll
@@ -57,6 +57,10 @@ class CombatScreen:
         buttons["yes"] = Button(300, 300, 100, 50, "Yes", (0, 200, 0), (255, 255, 255))
         buttons["no"] = Button(450, 300, 100, 50, "No", (200, 0, 0), (255, 255, 255))
         return buttons
+
+    def _create_death_fate_buttons(self):
+        # These can be the same as the reroll buttons for now
+        return self._create_fate_buttons()
 
     def handle_event(self, event):
         if self.is_over or self.turn != self.player:
@@ -105,6 +109,17 @@ class CombatScreen:
                     self._end_player_turn()
             elif self.buttons["no"].is_clicked(event):
                 self._end_player_turn()
+        elif self.selection_state == "death_fate_prompt":
+            if self.buttons["yes"].is_clicked(event):
+                self.player.spend_fate(1)
+                self.player.hp = 1
+                self.combat_log.append("You spend 1 Fate to narrowly escape death!")
+                self.selection_state = "main"
+                self.buttons = self._create_main_buttons()
+                self.turn = self.player # It's the player's turn now
+            elif self.buttons["no"].is_clicked(event):
+                self.winner = self.opponent
+                self.is_over = True
 
     def _execute_player_attack(self):
         weapon = self.player.equipped_weapon or all_items["unarmed_strike"]
@@ -193,8 +208,13 @@ class CombatScreen:
             self.combat_log.append(f"{self.opponent.name} missed with {weapon.name}!")
 
         if self.player.is_dead:
-            self.winner = self.opponent
-            self.is_over = True
+            if self.player.fate > 0:
+                self.selection_state = "death_fate_prompt"
+                self.buttons = self._create_death_fate_buttons()
+                return # Stop the turn here and wait for player input
+            else:
+                self.winner = self.opponent
+                self.is_over = True
 
         self.turn = self.player
 
@@ -237,6 +257,9 @@ class CombatScreen:
         elif self.selection_state == "fate_prompt":
             draw_text(screen, "Action failed!", self.font, (255, 255, 0), 300, 200)
             draw_text(screen, f"Spend 1 Fate to reroll? (Fate: {self.player.fate})", self.font, (255, 255, 255), 300, 250)
+        elif self.selection_state == "death_fate_prompt":
+            draw_text(screen, "You have suffered a fatal blow!", self.font, (255, 50, 50), 200, 200)
+            draw_text(screen, f"Spend 1 Fate to survive with 1 HP? (Fate: {self.player.fate})", self.font, (255, 255, 255), 200, 250)
 
         for button in self.buttons.values():
             button.draw(screen)
