@@ -19,11 +19,11 @@ class Weapon(Item):
         self.two_handed = two_handed
 
 class Armor(Item):
-    def __init__(self, name, description, defense_bonus, armor_penalty, is_shield=False, properties=None):
+    def __init__(self, name, description, defense_bonus, armor_penalty, armor_type="body", properties=None):
         super().__init__(name, description, properties)
         self.defense_bonus = defense_bonus
         self.armor_penalty = armor_penalty
-        self.is_shield = is_shield
+        self.armor_type = armor_type # e.g., "body", "shield", "hands"
 
 class Potion(Item):
     def __init__(self, name, description, effect, properties=None):
@@ -139,7 +139,7 @@ shield = Armor(
     description="A simple wooden shield.",
     defense_bonus=1,
     armor_penalty=1,
-    is_shield=True
+    armor_type="shield"
 )
 all_items["shield"] = shield
 
@@ -171,6 +171,16 @@ plate_armor = Armor(
     armor_penalty=3
 )
 all_items["plate_armor"] = plate_armor
+
+gauntlets_of_strength = Armor(
+    name="Gauntlets of Titanic Strength",
+    description="These gauntlets grant immense strength.",
+    defense_bonus=0,
+    armor_penalty=0,
+    armor_type="hands",
+    properties={"melee_damage_bonus": 2}
+)
+all_items["gauntlets_of_strength"] = gauntlets_of_strength
 
 stolen_heirloom = Item(
     name="Stolen Heirloom",

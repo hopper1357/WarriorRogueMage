@@ -1,6 +1,6 @@
 import pygame
 from character import Character
-from entities import TownGuard, Goblin, GiantRat, Skeleton, Bandit, GiantSpider, BanditLeader
+from entities import TownGuard, Goblin, GiantRat, Skeleton, Bandit, GiantSpider, BanditLeader, Drake
 from save_manager import save_game
 from tilemap import Map, Camera
 from event_manager import event_manager
@@ -35,8 +35,9 @@ class GameplayScreen:
         bandit = Bandit(x=3 * 32, y=3 * 32)
         spider = GiantSpider(x=17 * 32, y=8 * 32)
         bandit_leader = BanditLeader(x=18 * 32, y=2 * 32)
-        self.all_sprites.add(goblin, rat, skeleton, bandit, spider, bandit_leader)
-        self.monsters.add(goblin, rat, skeleton, bandit, spider, bandit_leader)
+        drake = Drake(x=12 * 32, y=14 * 32)
+        self.all_sprites.add(goblin, rat, skeleton, bandit, spider, bandit_leader, drake)
+        self.monsters.add(goblin, rat, skeleton, bandit, spider, bandit_leader, drake)
 
         self.player_speed = 5
         self.dialogue_to_show = None

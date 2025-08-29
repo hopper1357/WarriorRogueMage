@@ -233,6 +233,21 @@ def test_two_handed_weapon_negates_shield():
     assert char.equipped_weapon is None
     assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
 
+def test_passive_item_bonus():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)
+    assert char.melee_damage_bonus == 0
+
+    gauntlets = all_items["gauntlets_of_strength"]
+    char.inventory.append(gauntlets)
+
+    char.equip(gauntlets)
+    assert char.equipped_hands == gauntlets
+    assert char.melee_damage_bonus == 2
+
+    char.unequip(gauntlets)
+    assert char.equipped_hands is None
+    assert char.melee_damage_bonus == 0
+
 @patch('dice.Die.roll')
 def test_cast_spell_with_armor_penalty(mock_roll):
     mock_roll.return_value = 5 # Success roll

@@ -5,7 +5,7 @@ from ui import Button
 from items import all_items
 from spells import all_spells
 from event_manager import event_manager
-
+import random
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
     text_rect = text_surface.get_rect()
@@ -200,12 +200,18 @@ class CombatScreen:
         self._process_status_effects(self.opponent)
         if self.is_over: return # Effects might end the combat
 
-        weapon = self.opponent.equipped_weapon or all_items["unarmed_strike"]
-        success, total, damage = self.combat.attack(self.opponent, self.player, weapon)
-        if success:
-            self.combat_log.append(f"{self.opponent.name} hits for {damage} damage with {weapon.name}!")
+        # Drake special attack logic
+        if self.opponent.name == "Drake" and random.random() < 0.5:
+            message, damage_dealt = self.combat.special_attack(self.opponent, self.player, "Fire Spray")
+            self.combat_log.append(message)
         else:
-            self.combat_log.append(f"{self.opponent.name} missed with {weapon.name}!")
+            # Standard attack for all other monsters
+            weapon = self.opponent.equipped_weapon or all_items["unarmed_strike"]
+            success, total, damage = self.combat.attack(self.opponent, self.player, weapon)
+            if success:
+                self.combat_log.append(f"{self.opponent.name} hits for {damage} damage with {weapon.name}!")
+            else:
+                self.combat_log.append(f"{self.opponent.name} missed with {weapon.name}!")
 
         if self.player.is_dead:
             if self.player.fate > 0:

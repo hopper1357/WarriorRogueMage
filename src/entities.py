@@ -169,3 +169,21 @@ class BanditLeader(Bandit):
         chain_mail = all_items["chain_mail"]
         self.inventory.append(chain_mail)
         self.equip(chain_mail)
+
+class Drake(Monster):
+    def __init__(self, x, y):
+        super().__init__(
+            name="Drake",
+            x=x, y=y,
+            warrior=5,
+            rogue=3,
+            mage=2,
+            skills=["Unarmed"],
+            color=(139, 0, 0), # Dark Red
+            xp_value=300,
+            loot_table=[all_items["gauntlets_of_strength"]]
+        )
+        # Drakes fight with their claws/bite, modeled as unarmed
+        unarmed = all_items["unarmed_strike"]
+        self.inventory.append(unarmed)
+        self.equip(unarmed)

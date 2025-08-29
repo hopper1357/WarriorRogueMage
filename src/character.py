@@ -39,6 +39,7 @@ class Character(pygame.sprite.Sprite):
         self.equipped_weapon = None
         self.equipped_body_armor = None
         self.equipped_shield = None
+        self.equipped_hands = None
         self.equipped_implement = None
         self.d6 = Die()
         self.damage_resistances = {}
@@ -50,6 +51,7 @@ class Character(pygame.sprite.Sprite):
 
         # Bonuses
         self.ranged_attack_bonus = 0
+        self.melee_damage_bonus = 0
         self.awareness_bonus = 0
         self.lore_bonus = 0
         self.thaumaturgy_bonus = 0
@@ -81,11 +83,15 @@ class Character(pygame.sprite.Sprite):
             self.equipped_weapon = item
             print(f"{self.name} equipped {item.name}.")
         elif isinstance(item, Armor):
-            if item.is_shield:
+            if item.armor_type == "shield":
                 if self.equipped_shield:
                     self.unequip(self.equipped_shield)
                 self.equipped_shield = item
-            else:
+            elif item.armor_type == "hands":
+                if self.equipped_hands:
+                    self.unequip(self.equipped_hands)
+                self.equipped_hands = item
+            else: # "body"
                 if self.equipped_body_armor:
                     self.unequip(self.equipped_body_armor)
                 self.equipped_body_armor = item
@@ -99,6 +105,10 @@ class Character(pygame.sprite.Sprite):
         else:
             print(f"{item.name} is not an equippable item.")
 
+        # Apply passive bonuses from the equipped item
+        if item.properties.get("melee_damage_bonus"):
+            self.melee_damage_bonus += item.properties["melee_damage_bonus"]
+
     def unequip(self, item):
         if item == self.equipped_weapon:
             self.equipped_weapon = None
@@ -109,12 +119,19 @@ class Character(pygame.sprite.Sprite):
         elif item == self.equipped_shield:
             self.equipped_shield = None
             print(f"{self.name} unequipped {item.name}.")
+        elif item == self.equipped_hands:
+            self.equipped_hands = None
+            print(f"{self.name} unequipped {item.name}.")
         elif item == self.equipped_implement:
             self.thaumaturgy_bonus -= item.thaumaturgy_bonus
             self.equipped_implement = None
             print(f"{self.name} unequipped {item.name}.")
         else:
             print(f"{item.name} is not equipped.")
+
+        # Remove passive bonuses from the unequipped item
+        if item.properties.get("melee_damage_bonus"):
+            self.melee_damage_bonus -= item.properties["melee_damage_bonus"]
 
     def use_item(self, item):
         if item not in self.inventory:
@@ -151,6 +168,8 @@ class Character(pygame.sprite.Sprite):
         bonus = 0
         if self.equipped_body_armor:
             bonus += self.equipped_body_armor.defense_bonus
+        if self.equipped_hands:
+            bonus += self.equipped_hands.defense_bonus
 
         # Can't get shield bonus if using a two-handed weapon
         if self.equipped_shield:
@@ -227,7 +246,7 @@ class Character(pygame.sprite.Sprite):
         else:
             return None, self_total, opponent_total # Tie
 
-    def take_damage(self, damage, damage_type=None):
+    def take_damage(self, damage, damage_type=None, damage_bonus=0):
         if isinstance(damage, str):
             # Handle dice notation, e.g., "1d6", "2d6-1"
             parts = damage.lower().split('d')
@@ -251,6 +270,8 @@ class Character(pygame.sprite.Sprite):
                 total_damage += self.d6.exploding_roll()
 
             damage = total_damage + modifier
+
+        damage += damage_bonus
 
         if damage_type and damage_type in self.damage_resistances:
             resistance = self.damage_resistances[damage_type]

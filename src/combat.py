@@ -45,7 +45,11 @@ class Combat:
         success = total >= dl
 
         if success:
-            damage_dealt = defender.take_damage(weapon.damage, weapon.damage_type)
+            damage_bonus = 0
+            if weapon.type == "melee":
+                damage_bonus = attacker.melee_damage_bonus
+
+            damage_dealt = defender.take_damage(weapon.damage, weapon.damage_type, damage_bonus)
 
             # Special effect for Giant Spider
             if attacker.name == "Giant Spider":
@@ -56,3 +60,14 @@ class Combat:
             return True, total, damage_dealt
         else:
             return False, total, 0
+
+    def special_attack(self, attacker, defender, attack_name):
+        """Handles unique monster attacks that don't use standard weapon logic."""
+        damage_dealt = 0
+        message = ""
+
+        if attack_name == "Fire Spray":
+            damage_dealt = defender.take_damage("2d6", "fire")
+            message = f"{attacker.name} unleashes a spray of fire for {damage_dealt} damage!"
+
+        return message, damage_dealt
