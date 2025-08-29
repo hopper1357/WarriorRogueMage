@@ -1,9 +1,10 @@
 import pygame
 from character import Character
-from entities import TownGuard, Goblin, GiantRat, Skeleton
+from entities import TownGuard, Goblin, GiantRat, Skeleton, Bandit, GiantSpider, BanditLeader, Drake
 from save_manager import save_game
 from tilemap import Map, Camera
 from event_manager import event_manager
+from ui import Button
 
 def draw_text(surface, text, font, color, x, y):
     text_surface = font.render(text, True, color)
@@ -31,13 +32,24 @@ class GameplayScreen:
         goblin = Goblin(x=15 * 32, y=12 * 32)
         rat = GiantRat(x=5 * 32, y=14 * 32)
         skeleton = Skeleton(x=15 * 32, y=3 * 32)
-        self.all_sprites.add(goblin, rat, skeleton)
-        self.monsters.add(goblin, rat, skeleton)
+        bandit = Bandit(x=3 * 32, y=3 * 32)
+        spider = GiantSpider(x=17 * 32, y=8 * 32)
+        bandit_leader = BanditLeader(x=18 * 32, y=2 * 32)
+        drake = Drake(x=12 * 32, y=14 * 32)
+        self.all_sprites.add(goblin, rat, skeleton, bandit, spider, bandit_leader, drake)
+        self.monsters.add(goblin, rat, skeleton, bandit, spider, bandit_leader, drake)
 
         self.player_speed = 5
         self.dialogue_to_show = None
         self.active_monster = None
         self.save_message_timer = 0
+        self.rest_message = ""
+        self.rest_message_timer = 0
+        self.hazard_message = ""
+        self.hazard_message_timer = 0
+        self.hazard_cooldown = 0
+
+        self.rest_button = Button(700, 10, 90, 40, "Rest", (0, 100, 0), (255, 255, 255))
 
         self._subscribe_quests()
 
@@ -67,6 +79,16 @@ class GameplayScreen:
                 if self.player.sustained_spells:
                     self.player.sustained_spells.clear()
                     print("You have dismissed all sustained spells.")
+
+        if self.rest_button.is_clicked(event):
+            hp_before = self.player.hp
+            mana_before = self.player.mana
+            self.player.rest()
+            hp_recovered = self.player.hp - hp_before
+            mana_recovered = self.player.mana - mana_before
+            self.rest_message = f"Rested. HP +{hp_recovered}, Mana +{mana_recovered}"
+            self.rest_message_timer = 120 # Show message for 2 seconds
+
         return None
 
     def update(self, screen):
@@ -92,14 +114,32 @@ class GameplayScreen:
         if self.save_message_timer > 0:
             self.save_message_timer -= 1
 
+        if self.rest_message_timer > 0:
+            self.rest_message_timer -= 1
+
+        if self.hazard_message_timer > 0:
+            self.hazard_message_timer -= 1
+
+        if self.hazard_cooldown > 0:
+            self.hazard_cooldown -= 1
+
+        # Hazard collision logic
+        if self.hazard_cooldown == 0:
+            hits = pygame.sprite.spritecollide(self.player, self.map.hazards, False)
+            if hits:
+                hazard = hits[0]
+                hp_before = self.player.hp
+                self.player.take_damage(hazard.damage, hazard.damage_type)
+                damage_taken = hp_before - self.player.hp
+                self.hazard_message = f"Took {damage_taken} {hazard.damage_type} damage!"
+                self.hazard_message_timer = 120 # Show message for 2 seconds
+                self.hazard_cooldown = 60 # 1 second cooldown
+
         # Interaction logic
         self.dialogue_to_show = None
         for npc in self.npcs:
             if self.player.rect.colliderect(npc.rect.inflate(20, 20)):
-                self.dialogue_to_show = npc.dialogue
-                if npc.quest_to_give and self.player.get_quest(npc.quest_to_give.title) is None:
-                    self.player.add_quest(npc.quest_to_give)
-                    self._subscribe_quests() # Resubscribe to include the new quest
+                self.dialogue_to_show = npc.interact(self.player)
                 break
 
         for monster in self.monsters:
@@ -142,6 +182,13 @@ class GameplayScreen:
         if self.save_message_timer > 0:
             draw_text(screen, "Game Saved!", self.font, (255, 255, 0), 350, 10)
 
+        if self.rest_message_timer > 0:
+            draw_text(screen, self.rest_message, self.font, (173, 216, 230), 250, 50)
+
+        if self.hazard_message_timer > 0:
+            draw_text(screen, self.hazard_message, self.font, (255, 100, 100), 250, 80)
+
+        self.rest_button.draw(screen)
         self._draw_hud(screen)
 
     def _draw_hud(self, screen):
@@ -159,10 +206,12 @@ class GameplayScreen:
 
         draw_text(screen, "Equipped:", self.font, (255, 255, 255), 600, 510)
         weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
-        armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
+        body_armor_name = self.player.equipped_body_armor.name if self.player.equipped_body_armor else "None"
+        shield_name = self.player.equipped_shield.name if self.player.equipped_shield else "None"
         implement_name = self.player.equipped_implement.name if self.player.equipped_implement else "None"
         draw_text(screen, f"W: {weapon_name}", self.font, (255, 255, 255), 600, 550)
-        draw_text(screen, f"A: {armor_name}", self.font, (255, 255, 255), 600, 580)
+        draw_text(screen, f"B: {body_armor_name}", self.font, (255, 255, 255), 600, 580)
+        draw_text(screen, f"S: {shield_name}", self.font, (255, 255, 255), 600, 610)
         if self.player.equipped_implement:
             draw_text(screen, f"I: {implement_name} ({self.player.equipped_implement.mana_pool}/{self.player.equipped_implement.max_mana})", self.font, (255, 255, 255), 400, 580)
 

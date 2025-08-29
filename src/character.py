@@ -2,8 +2,9 @@ import pygame
 from dice import Die
 from spell import Spell
 from talent import Talent
-from items import Weapon, Armor, MagicImplement
+from items import Weapon, Armor, MagicImplement, Potion
 from talents import all_talents
+from event_manager import event_manager
 import ritual
 import quest
 
@@ -32,10 +33,13 @@ class Character(pygame.sprite.Sprite):
         self.talents = talents if talents is not None else []
         self.spellbook = []
         self.sustained_spells = []
+        self.status_effects = []
         self.inventory = []
         self.journal = []
         self.equipped_weapon = None
-        self.equipped_armor = None
+        self.equipped_body_armor = None
+        self.equipped_shield = None
+        self.equipped_hands = None
         self.equipped_implement = None
         self.d6 = Die()
         self.damage_resistances = {}
@@ -47,6 +51,7 @@ class Character(pygame.sprite.Sprite):
 
         # Bonuses
         self.ranged_attack_bonus = 0
+        self.melee_damage_bonus = 0
         self.awareness_bonus = 0
         self.lore_bonus = 0
         self.thaumaturgy_bonus = 0
@@ -78,9 +83,18 @@ class Character(pygame.sprite.Sprite):
             self.equipped_weapon = item
             print(f"{self.name} equipped {item.name}.")
         elif isinstance(item, Armor):
-            if self.equipped_armor:
-                self.unequip(self.equipped_armor)
-            self.equipped_armor = item
+            if item.armor_type == "shield":
+                if self.equipped_shield:
+                    self.unequip(self.equipped_shield)
+                self.equipped_shield = item
+            elif item.armor_type == "hands":
+                if self.equipped_hands:
+                    self.unequip(self.equipped_hands)
+                self.equipped_hands = item
+            else: # "body"
+                if self.equipped_body_armor:
+                    self.unequip(self.equipped_body_armor)
+                self.equipped_body_armor = item
             print(f"{self.name} equipped {item.name}.")
         elif isinstance(item, MagicImplement):
             if self.equipped_implement:
@@ -91,12 +105,22 @@ class Character(pygame.sprite.Sprite):
         else:
             print(f"{item.name} is not an equippable item.")
 
+        # Apply passive bonuses from the equipped item
+        if item.properties.get("melee_damage_bonus"):
+            self.melee_damage_bonus += item.properties["melee_damage_bonus"]
+
     def unequip(self, item):
         if item == self.equipped_weapon:
             self.equipped_weapon = None
             print(f"{self.name} unequipped {item.name}.")
-        elif item == self.equipped_armor:
-            self.equipped_armor = None
+        elif item == self.equipped_body_armor:
+            self.equipped_body_armor = None
+            print(f"{self.name} unequipped {item.name}.")
+        elif item == self.equipped_shield:
+            self.equipped_shield = None
+            print(f"{self.name} unequipped {item.name}.")
+        elif item == self.equipped_hands:
+            self.equipped_hands = None
             print(f"{self.name} unequipped {item.name}.")
         elif item == self.equipped_implement:
             self.thaumaturgy_bonus -= item.thaumaturgy_bonus
@@ -105,13 +129,74 @@ class Character(pygame.sprite.Sprite):
         else:
             print(f"{item.name} is not equipped.")
 
+        # Remove passive bonuses from the unequipped item
+        if item.properties.get("melee_damage_bonus"):
+            self.melee_damage_bonus -= item.properties["melee_damage_bonus"]
+
+    def use_item(self, item):
+        if item not in self.inventory:
+            print(f"{self.name} does not have {item.name}.")
+            return
+
+        if hasattr(item, 'use'):
+            item.use(self)
+            # Consume the item if it's a potion
+            if isinstance(item, Potion):
+                self.inventory.remove(item)
+                print(f"{self.name} used {item.name}.")
+        else:
+            print(f"{item.name} is not a usable item.")
+
+    def add_item_to_inventory(self, item):
+        self.inventory.append(item)
+        event_manager.post({"type": "inventory_updated", "item": item, "character": self})
+        print(f"{self.name} received {item.name}.")
+
+    def has_item(self, item_name):
+        return any(item.name == item_name for item in self.inventory)
+
+    def remove_item_from_inventory(self, item_name):
+        for item in self.inventory:
+            if item.name == item_name:
+                self.inventory.remove(item)
+                print(f"{self.name} lost {item.name}.")
+                return True
+        return False
+
     @property
     def total_defense(self):
-        bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
+        bonus = 0
+        if self.equipped_body_armor:
+            bonus += self.equipped_body_armor.defense_bonus
+        if self.equipped_hands:
+            bonus += self.equipped_hands.defense_bonus
+
+        # Can't get shield bonus if using a two-handed weapon
+        if self.equipped_shield:
+            if not (self.equipped_weapon and self.equipped_weapon.two_handed):
+                bonus += self.equipped_shield.defense_bonus
+
         return self.defense + bonus
+
+    @property
+    def is_seriously_wounded(self):
+        return self.hp <= self.max_hp / 2
 
     def get_sustained_penalty(self):
         return -len(self.sustained_spells)
+
+    def add_status_effect(self, effect):
+        # Prevent duplicate effects of the same name
+        if not self.get_status_effect(effect.name):
+            self.status_effects.append(effect)
+            effect.on_apply(self)
+            print(f"{self.name} is now {effect.name}.")
+
+    def get_status_effect(self, effect_name):
+        for effect in self.status_effects:
+            if effect.name == effect_name:
+                return effect
+        return None
 
     def _get_attribute_check_total(self, attribute, relevant_skills):
         if attribute not in self.attributes:
@@ -141,6 +226,9 @@ class Character(pygame.sprite.Sprite):
 
         total += self.get_sustained_penalty()
 
+        if self.is_seriously_wounded:
+            total -= 3
+
         return total
 
     def attribute_check(self, attribute, relevant_skills, dl):
@@ -158,20 +246,79 @@ class Character(pygame.sprite.Sprite):
         else:
             return None, self_total, opponent_total # Tie
 
-    def take_damage(self, damage, damage_type=None):
+    def take_damage(self, damage, damage_type=None, damage_bonus=0):
+        if isinstance(damage, str):
+            # Handle dice notation, e.g., "1d6", "2d6-1"
+            parts = damage.lower().split('d')
+            num_dice = int(parts[0])
+
+            modifier = 0
+            if '-' in parts[1]:
+                d_parts = parts[1].split('-')
+                dice_type = int(d_parts[0])
+                modifier = -int(d_parts[1])
+            elif '+' in parts[1]:
+                d_parts = parts[1].split('+')
+                dice_type = int(d_parts[0])
+                modifier = int(d_parts[1])
+            else:
+                dice_type = int(parts[1])
+
+            total_damage = 0
+            for _ in range(num_dice):
+                # Damage rolls always explode
+                total_damage += self.d6.exploding_roll()
+
+            damage = total_damage + modifier
+
+        damage += damage_bonus
+
         if damage_type and damage_type in self.damage_resistances:
             resistance = self.damage_resistances[damage_type]
             damage = int(damage * (1 - resistance))
             print(f"{self.name} resists {damage_type} damage!")
 
-        self.hp -= damage
+        final_damage = damage
+
+        self.hp -= final_damage
         if self.hp < 0:
             self.hp = 0
+
+        print(f"{self.name} takes {final_damage} {damage_type or ''} damage.")
+        return final_damage
 
     def heal(self, amount):
         self.hp += amount
         if self.hp > self.max_hp:
             self.hp = self.max_hp
+
+    def restore_mana(self, amount):
+        self.mana += amount
+        if self.mana > self.max_mana:
+            self.mana = self.max_mana
+
+    def spend_fate(self, amount):
+        if self.fate >= amount:
+            self.fate -= amount
+            print(f"{self.name} spends {amount} Fate. Remaining: {self.fate}")
+            return True
+        print(f"{self.name} does not have enough Fate to spend.")
+        return False
+
+    def rest(self):
+        """
+        Recovers HP and Mana after a day of rest.
+        Heals HP equal to the highest attribute.
+        Heals an additional 2 HP if the character has the Herbalism skill.
+        Fully restores Mana.
+        """
+        hp_to_recover = max(self.attributes.values())
+        if "Herbalism" in self.skills:
+            hp_to_recover += 2
+
+        self.heal(hp_to_recover)
+        self.mana = self.max_mana
+        print(f"{self.name} rests, recovering {hp_to_recover} HP and all Mana.")
 
     def cast_spell(self, spell, target=None, use_implement=False, enhancement_level=0):
         # Check if the character knows the spell
@@ -181,8 +328,10 @@ class Character(pygame.sprite.Sprite):
 
         # Calculate final mana cost and DL
         mana_cost = spell.mana_cost
-        if self.equipped_armor:
-            mana_cost += self.equipped_armor.armor_penalty
+        if self.equipped_body_armor:
+            mana_cost += self.equipped_body_armor.armor_penalty
+        if self.equipped_shield:
+            mana_cost += self.equipped_shield.armor_penalty
 
         enhancement_cost = enhancement_level * (spell.mana_cost // 2)
         mana_cost += enhancement_cost

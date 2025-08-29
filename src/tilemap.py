@@ -4,27 +4,28 @@ import os
 TILESIZE = 32
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, x, y, tile_type):
+    def __init__(self, x, y, image):
         super().__init__()
-        self.tile_type = tile_type
-
-        # Simple visual representation for now
-        self.image = pygame.Surface((TILESIZE, TILESIZE))
-        if self.tile_type == "wall":
-            self.image.fill((100, 100, 100)) # Gray for walls
-        else:
-            self.image.fill((50, 150, 50)) # Green for grass
-
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.topleft = (x * TILESIZE, y * TILESIZE)
 
+class HazardTile(Tile):
+    def __init__(self, x, y, image, damage, damage_type):
+        super().__init__(x, y, image)
+        self.damage = damage
+        self.damage_type = damage_type
+
 class Map:
-    def __init__(self, filename):
+    def __init__(self, filepath):
         self.data = []
-        game_folder = os.path.dirname(__file__)
-        map_folder = os.path.join(game_folder, '..', 'assets', 'maps')
-        self.map_path = os.path.join(map_folder, filename)
-        with open(self.map_path, 'rt') as f:
+        # If the filepath is not absolute, assume it's a filename in the default maps folder
+        if not os.path.isabs(filepath):
+            game_folder = os.path.dirname(__file__)
+            map_folder = os.path.join(game_folder, '..', 'assets', 'maps')
+            filepath = os.path.join(map_folder, filepath)
+
+        with open(filepath, 'rt') as f:
             for line in f:
                 self.data.append(line.strip())
 
@@ -35,16 +36,26 @@ class Map:
 
         self.all_tiles = pygame.sprite.Group()
         self.walls = pygame.sprite.Group()
+        self.hazards = pygame.sprite.Group()
+
+        # Define tile images
+        wall_img = pygame.Surface((TILESIZE, TILESIZE)); wall_img.fill((100, 100, 100))
+        grass_img = pygame.Surface((TILESIZE, TILESIZE)); grass_img.fill((50, 150, 50))
+        fire_img = pygame.Surface((TILESIZE, TILESIZE)); fire_img.fill((200, 50, 50))
 
         for row, tiles in enumerate(self.data):
             for col, tile_char in enumerate(tiles):
+                grass_tile = Tile(col, row, grass_img.copy())
+                self.all_tiles.add(grass_tile)
+
                 if tile_char == '#':
-                    wall_tile = Tile(col, row, "wall")
+                    wall_tile = Tile(col, row, wall_img.copy())
                     self.all_tiles.add(wall_tile)
                     self.walls.add(wall_tile)
-                else:
-                    grass_tile = Tile(col, row, "grass")
-                    self.all_tiles.add(grass_tile)
+                elif tile_char == 'F':
+                    fire_tile = HazardTile(col, row, fire_img.copy(), damage="1d6", damage_type="fire")
+                    self.all_tiles.add(fire_tile)
+                    self.hazards.add(fire_tile)
 
 class Camera:
     def __init__(self, width, height):

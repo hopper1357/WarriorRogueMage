@@ -1,6 +1,7 @@
 from character import Character
 from dice import Die
 from items import Weapon
+from effects import Poisoned
 
 class Combat:
     def __init__(self, char1, char2):
@@ -34,27 +35,39 @@ class Combat:
             attack_bonus = 0 # No melee bonus for now
 
         # The DL for the attack is the defender's total defense
-        dl = defender.total_defense
+        if weapon.properties.get("ignores_armor"):
+            dl = defender.defense # Use base defense, ignoring armor
+        else:
+            dl = defender.total_defense
+
         _, total = attacker.attribute_check(attack_attribute, [attack_skill], dl)
         total += attack_bonus
         success = total >= dl
 
         if success:
-            # Damage roll
-            damage_str = weapon.damage
-            damage_roll = self.d6.exploding_roll() # Damage rolls always explode
+            damage_bonus = 0
+            if weapon.type == "melee":
+                damage_bonus = attacker.melee_damage_bonus
 
-            modifier = 0
-            if "-" in damage_str:
-                modifier = -int(damage_str.split("-")[1])
-            elif "+" in damage_str:
-                modifier = int(damage_str.split("+")[1])
+            damage_dealt = defender.take_damage(weapon.damage, weapon.damage_type, damage_bonus)
 
-            damage = damage_roll + modifier
-            if damage < 0:
-                damage = 0
+            # Special effect for Giant Spider
+            if attacker.name == "Giant Spider":
+                # 50% chance to poison
+                if self.d6.roll() > 3:
+                    defender.add_status_effect(Poisoned(duration=3))
 
-            defender.take_damage(damage, weapon.damage_type)
-            return True, total, damage
+            return True, total, damage_dealt
         else:
             return False, total, 0
+
+    def special_attack(self, attacker, defender, attack_name):
+        """Handles unique monster attacks that don't use standard weapon logic."""
+        damage_dealt = 0
+        message = ""
+
+        if attack_name == "Fire Spray":
+            damage_dealt = defender.take_damage("2d6", "fire")
+            message = f"{attacker.name} unleashes a spray of fire for {damage_dealt} damage!"
+
+        return message, damage_dealt

@@ -5,7 +5,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from character import Character
 from spell import Spell
 from talents import tough_as_nails, marksman, alertness, scholar, blood_mage
-from items import Weapon, Armor, MagicImplement
+from items import Weapon, Armor, MagicImplement, all_items
+from effects import Poisoned
 from ritual import Ritual
 from quest import Quest
 from unittest.mock import patch, MagicMock
@@ -53,6 +54,25 @@ def test_attribute_check_success(mock_roll):
     success, total = char.attribute_check("warrior", ["Swords"], 10)
     assert success
     assert total == 11
+
+def test_seriously_wounded_status():
+    char = Character("Test", x=0, y=0, warrior=4, rogue=2, mage=1) # max_hp is 10
+    assert not char.is_seriously_wounded
+
+    char.hp = 6
+    assert not char.is_seriously_wounded
+
+    char.hp = 5
+    assert char.is_seriously_wounded
+
+    char.hp = 2
+    assert char.is_seriously_wounded
+
+    char.hp = 0
+    assert char.is_seriously_wounded
+
+    char.heal(6) # hp is 6
+    assert not char.is_seriously_wounded
 
 @patch('dice.Die.roll')
 def test_attribute_check_failure(mock_roll):
@@ -166,18 +186,67 @@ def test_character_with_talents():
 
 def test_equipment():
     char = Character("Test", x=0, y=0, warrior=3, rogue=2, mage=3)
-    assert char.total_defense == 6 # (3+2)//2 + 4 = 6
+    base_defense = char.defense # (3+2)//2+4 = 6
+    assert char.total_defense == base_defense
 
-    leather_armor = Armor("Leather Armor", "Some leather armor", defense_bonus=1, armor_penalty=1)
+    leather_armor = all_items["leather_armor"]
+    shield = all_items["shield"]
+
     char.inventory.append(leather_armor)
     char.equip(leather_armor)
+    assert char.equipped_body_armor == leather_armor
+    assert char.total_defense == base_defense + leather_armor.defense_bonus # 6 + 1 = 7
 
-    assert char.equipped_armor == leather_armor
-    assert char.total_defense == 7 # 6 + 1
+    char.inventory.append(shield)
+    char.equip(shield)
+    assert char.equipped_shield == shield
+    assert char.total_defense == base_defense + leather_armor.defense_bonus + shield.defense_bonus # 7 + 1 = 8
 
     char.unequip(leather_armor)
-    assert char.equipped_armor is None
-    assert char.total_defense == 6
+    assert char.equipped_body_armor is None
+    assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
+
+    char.unequip(shield)
+    assert char.equipped_shield is None
+    assert char.total_defense == base_defense # 6
+
+def test_two_handed_weapon_negates_shield():
+    char = Character("Test", x=0, y=0, warrior=3, rogue=2, mage=3)
+    base_defense = char.defense
+
+    shield = all_items["shield"]
+    two_handed_sword = all_items["two_handed_sword"]
+
+    # Equip shield, defense should go up
+    char.inventory.append(shield)
+    char.equip(shield)
+    assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
+
+    # Equip two-handed sword, shield bonus should be negated
+    char.inventory.append(two_handed_sword)
+    char.equip(two_handed_sword)
+    assert char.equipped_weapon == two_handed_sword
+    assert char.total_defense == base_defense # Shield bonus is ignored
+
+    # Unequip two-handed sword, shield bonus should return
+    char.unequip(two_handed_sword)
+    assert char.equipped_weapon is None
+    assert char.total_defense == base_defense + shield.defense_bonus # 6 + 1 = 7
+
+def test_passive_item_bonus():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)
+    assert char.melee_damage_bonus == 0
+
+    gauntlets = all_items["gauntlets_of_strength"]
+    char.inventory.append(gauntlets)
+
+    char.equip(gauntlets)
+    assert char.equipped_hands == gauntlets
+    assert char.melee_damage_bonus == 2
+
+    char.unequip(gauntlets)
+    assert char.equipped_hands is None
+    assert char.melee_damage_bonus == 0
 
 @patch('dice.Die.roll')
 def test_cast_spell_with_armor_penalty(mock_roll):
@@ -189,14 +258,17 @@ def test_cast_spell_with_armor_penalty(mock_roll):
     spell = Spell("Test Spell", circle=1, dl=10, mana_cost=5, effect=mock_effect)
     char.spellbook.append(spell)
 
-    leather_armor = Armor("Leather Armor", "Some leather armor", defense_bonus=1, armor_penalty=1)
-    char.inventory.append(leather_armor)
+    leather_armor = all_items["leather_armor"]
+    shield = all_items["shield"]
+    char.inventory.extend([leather_armor, shield])
     char.equip(leather_armor)
+    char.equip(shield)
 
+    # Spell cost is 5. Leather armor penalty is 1. Shield penalty is 1. Total cost = 7.
     result = char.cast_spell(spell)
 
     assert result is True
-    assert char.mana == 4 # 10 - (5 + 1)
+    assert char.mana == 3 # 10 - 7
     mock_effect.assert_called_once_with(caster=char, target=None, enhancement_level=0)
 
 def test_add_xp_and_level_up():
@@ -254,6 +326,124 @@ def test_magic_implement_bonus(mock_roll):
     success, total = char.attribute_check("mage", ["Thaumaturgy"], 10)
     assert success
     assert total == 10
+
+def test_poisoned_status_effect():
+    char = Character("Test", x=0, y=0, warrior=5, rogue=1, mage=1) # max_hp=11
+    initial_hp = char.hp
+
+    poison_effect = Poisoned(duration=3, damage=2)
+    char.add_status_effect(poison_effect)
+
+    assert len(char.status_effects) == 1
+    assert char.get_status_effect("Poisoned") is not None
+
+    # Simulate turn 1
+    poison_effect.on_turn_start()
+    assert char.hp == initial_hp - 2
+
+    # Simulate turn 2
+    poison_effect.on_turn_start()
+    assert char.hp == initial_hp - 4
+
+    # Simulate turn 3
+    poison_effect.on_turn_start()
+    assert char.hp == initial_hp - 6
+
+    # After duration, the effect should be removed by the combat loop,
+    # but we can test the state here.
+    assert poison_effect.duration == 3 # Duration doesn't change on the effect itself
+
+def test_spend_fate():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=3, mage=1) # fate = 3
+
+    # Case 1: Spend fate successfully
+    assert char.fate == 3
+    result = char.spend_fate(1)
+    assert result is True
+    assert char.fate == 2
+
+    # Case 2: Spend more fate than available
+    result = char.spend_fate(3) # Only has 2 left
+    assert result is False
+    assert char.fate == 2 # Fate should not change
+
+    # Case 3: Spend remaining fate
+    result = char.spend_fate(2)
+    assert result is True
+    assert char.fate == 0
+
+    # Case 4: Spend fate when at zero
+    result = char.spend_fate(1)
+    assert result is False
+    assert char.fate == 0
+
+def test_use_mana_potion():
+    char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=5) # max_mana = 10
+    mana_potion = all_items["mana_potion"]
+
+    # Case 1: Restore mana from 0
+    char.mana = 0
+    char.inventory.append(mana_potion)
+    assert mana_potion in char.inventory
+
+    char.use_item(mana_potion)
+
+    assert char.mana == 10
+    assert mana_potion not in char.inventory
+
+    # Case 2: Should not exceed max mana
+    char.mana = 5
+    char.inventory.append(mana_potion)
+
+    char.use_item(mana_potion)
+
+    assert char.mana == 10 # Not 15
+    assert mana_potion not in char.inventory
+
+def test_rest_mechanic():
+    # Test case 1: Standard rest
+    char = Character("Test", x=0, y=0, warrior=4, rogue=3, mage=2) # max_hp=10, max_mana=4, highest_attr=4
+    char.hp = 1
+    char.mana = 0
+
+    char.rest()
+
+    assert char.hp == 5 # 1 + 4
+    assert char.mana == 4 # max_mana
+
+    # Test case 2: Rest with Herbalism skill
+    char_herbalist = Character("Herbalist", x=0, y=0, warrior=2, rogue=3, mage=5, skills=["Herbalism"]) # max_hp=8, max_mana=10, highest_attr=5
+    char_herbalist.hp = 1
+    char_herbalist.mana = 0
+
+    char_herbalist.rest()
+
+    assert char_herbalist.hp == 8 # 1 + 5 (mage) + 2 (herbalism)
+    assert char_herbalist.mana == 10 # max_mana
+
+    # Test case 3: Rest should not exceed max HP
+    char.hp = char.max_hp - 1 # hp is 9
+    char.rest()
+    assert char.hp == char.max_hp # Should be 10, not 13
+
+@patch('dice.Die.roll')
+def test_seriously_wounded_penalty(mock_roll):
+    mock_roll.return_value = 5
+    char = Character("Test", x=0, y=0, warrior=4, rogue=2, mage=1, skills=["Swords"])
+    char.hp = 5 # max_hp is 10, so this is exactly half
+    assert char.is_seriously_wounded
+
+    # Total = 5 (roll) + 4 (warrior) + 2 (skill) - 3 (penalty) = 8
+    success, total = char.attribute_check("warrior", ["Swords"], 10)
+    assert not success
+    assert total == 8
+
+    char.heal(1) # hp is now 6, not seriously wounded
+    assert not char.is_seriously_wounded
+    # Total = 5 (roll) + 4 (warrior) + 2 (skill) = 11
+    success, total = char.attribute_check("warrior", ["Swords"], 10)
+    assert success
+    assert total == 11
 
 def test_journal():
     char = Character("Test", x=0, y=0, warrior=1, rogue=1, mage=1)
